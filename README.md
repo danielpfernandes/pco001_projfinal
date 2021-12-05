@@ -2,9 +2,9 @@
 Projeto final da disciplina PCO001 - Algoritmos e Estrutura de Dados, da Universidade Federal de Itajubá - MG. 
 Trabalho baseado na implementação realizada no repositório LibOPFcpp. Todos os copyrights do projeto original foram mantidos no projeto em respeito às autorias responsáveis.
 
-C++17 implementation of OPF classifier in one header. For a Python binding, check [PyOPF](https://github.com/marcoscleison/PyOPF).
+Verifique o projeto original [LibOPFcpp](https://github.com/thierrypin/LibOPFcpp) para maiores detalhes.
 
-## How to cite
+## Citações
 
 Algoritmo descrito em:
 
