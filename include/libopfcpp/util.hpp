@@ -94,7 +94,7 @@ distanciaEuclidiana < T >)
     Mat<float> distances(dadosDeTeste.rows, dadosDeTreinamento.rows);
     int vec_size = dadosDeTreinamento.cols;
 
-    #pragma omp parallel for shared(train_data, test_data, distances)
+    #pragma omp parallel for shared(dadosDeTreinamento, dadosDeTeste, distances)
     for (int i = 0; i < distances.rows; i++)
     {
         for (int j = 0; j < distances.cols; j++)
