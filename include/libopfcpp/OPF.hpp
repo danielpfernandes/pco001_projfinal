@@ -1,12 +1,18 @@
-/******************************************************
- * A C++ program for the OPF classification machine,  *
- * all contained in a single header file.             *
- *                                                    *
- * Author: Thierry Moreira                            *
- *                                                    *
- ******************************************************/
+/*******************************************************
+ * Aplicação C++ para a classificação usando algoritmo *
+ * OPF, parte do projeto final de PCO001 da            *
+ * Universidade Federal de Itajubá - MG                *
+ *                                                     *
+ *                                                     *
+ * Projeto original: Thierry Moreira, 2019             *
+ *                                                     *
+ * Adaptado por: Daniel P Fernandes, Natalia S         *
+ * Sanchez & Alexandre L Sousa                         *
+ *                                                     *
+ *******************************************************/
 
-// Copyright 2019 Thierry Moreira
+// Copyright 2021 Daniel P Fernandes, Natalia S Sanchez & Alexandre
+// L Sousa
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,7 +55,7 @@ using uchar = unsigned char;
 
 // Generic distance function
 template <class T>
-using distance_function = std::function<T (const T*, const T*, size_t)>;
+using funcaoDistancia = std::function<T (const T*, const T*, size_t)>;
 
 
 
@@ -101,10 +107,13 @@ void read_bin(std::istream& input, T* val, int n=1)
     input.read((char*) val, sizeof(T) * n);
 }
 
-
 /*****************************************/
 /************** Matrix type **************/
 /*****************************************/
+/**
+ * Classe n-dimensional de matriz densa
+ * @tparam T
+ */
 template <class T=float>
 class Mat
 {
@@ -286,7 +295,7 @@ void Mat<T>::release()
 
 // Default distance function
 template <class T>
-T euclidean_distance(const T* a, const T* b, size_t size)
+T distanciaEuclidiana(const T* a, const T* b, size_t size)
 {
     T sum = 0;
     for (size_t i = 0; i < size; i++)
@@ -324,7 +333,7 @@ T cosine_distance(const T* a, const T* b, size_t size)
 }
 
 template <class T>
-Mat<T> compute_train_distances(const Mat<T> &features, distance_function<T> distance=euclidean_distance<T>)
+Mat<T> computaDistanciasDeTreinamento(const Mat<T> &features, funcaoDistancia<T> distance= distanciaEuclidiana<T>)
 {
     Mat<float> distances(features.rows, features.rows);
 
@@ -356,7 +365,7 @@ private:
 public:
     DistMat(){this->rows = this->cols = this->size = 0;};
     DistMat(const DistMat& other);
-    DistMat(const Mat<T>& features, distance_function<T> distance=euclidean_distance<T>);
+    DistMat(const Mat<T>& features, funcaoDistancia<T> distance=distanciaEuclidiana<T>);
     virtual T& at(size_t i, size_t j);
     const virtual T at(size_t i, size_t j) const;
 };
@@ -382,7 +391,7 @@ DistMat<T>::DistMat(const DistMat& other)
 }
 
 template <class T>
-DistMat<T>::DistMat(const Mat<T>& features, distance_function<T> distance)
+DistMat<T>::DistMat(const Mat<T>& features, funcaoDistancia<T> distance)
 {
     this->rows = features.rows;
     this->cols = features.rows;
@@ -561,13 +570,13 @@ private:
 
     // Options
     bool precomputed;
-    distance_function<T> distance;
+    funcaoDistancia<T> distance;
 
     void prim_prototype(const std::vector<int> &labels);
 
 
 public:
-    SupervisedOPF(bool precomputed=false, distance_function<T> distance=euclidean_distance<T>);
+    SupervisedOPF(bool precomputed=false, funcaoDistancia<T> distance=distanciaEuclidiana<T>);
 
     void fit(const Mat<T> &train_data, const std::vector<int> &labels);
     std::vector<int> predict(const Mat<T> &test_data);
@@ -583,7 +592,7 @@ public:
 };
 
 template <class T>
-SupervisedOPF<T>::SupervisedOPF(bool precomputed, distance_function<T> distance)
+SupervisedOPF<T>::SupervisedOPF(bool precomputed, funcaoDistancia<T> distance)
 {
     this->precomputed = precomputed;
     this->distance = distance;
@@ -1010,7 +1019,7 @@ class UnsupervisedOPF
 private:
     // Model
     std::shared_ptr<const Mat<T>> train_data;   // Training data (original vectors or distance matrix)
-    distance_function<T> distance; // Distance function
+    funcaoDistancia<T> distance; // Distance function
     std::vector<NodeKNN> nodes;    // Learned model
     std::vector<int> queue;        // Priority queue implemented as a linear search in a vector
     int k;                         // The number of neighbors to build the graph
@@ -1035,7 +1044,7 @@ private:
     void cluster();
 
 public:
-    UnsupervisedOPF(int k=5, bool anomaly=false, float thresh=.1, bool precomputed=false, distance_function<T> distance=euclidean_distance<T>);
+    UnsupervisedOPF(int k=5, bool anomaly=false, float thresh=.1, bool precomputed=false, funcaoDistancia<T> distance=distanciaEuclidiana<T>);
 
     void fit(const Mat<T> &train_data);
     std::vector<int> fit_predict(const Mat<T> &train_data);
@@ -1060,7 +1069,7 @@ public:
 };
 
 template <class T>
-UnsupervisedOPF<T>::UnsupervisedOPF(int k, bool anomaly, float thresh, bool precomputed, distance_function<T> distance)
+UnsupervisedOPF<T>::UnsupervisedOPF(int k, bool anomaly, float thresh, bool precomputed, funcaoDistancia<T> distance)
 {
     this->k = k;
     this->precomputed = precomputed;
