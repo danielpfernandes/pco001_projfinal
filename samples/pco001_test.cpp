@@ -1,5 +1,5 @@
 /******************************************************
- * Exemplo de uso do SupervisedOPF em 3 datasets como *
+ * Exemplo de uso do OPFSupervisionado em 3 datasets como *
  * requisito parcial do projeto final de PCO001 da    *
  * Universidade Federal de Itajubá - MG               *
  *                                                    *
@@ -72,7 +72,7 @@ typedef timeval timer;
  */
 int main(int argc, char *argv[])
 {
-    vector<string> datasets = {"data/pco001/iris.dat", "data/pco001/banana.dat", "data/pco001/messidor_features.dat"};
+    vector<string> datasets = {"dado/pco001/iris.dat", "dado/pco001/banana.dat", "dado/pco001/messidor_features.dat"};
     TIMING_START();
 
     vector<vector<float>> times(5, vector<float>(datasets.size()));
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
 
         // Divide
         SECTION_START(dataset.c_str());
-        printf("Tamanho dos dados: Instâncias (%lu) x Atributos (%lu)\n\n", dado.rows, dado.cols);
+        printf("Tamanho dos dados: Instâncias (%lu) x Atributos (%lu)\n\n", dado.linhas, dado.colunas);
 
         printf("Preparando dado\n");
         StratifiedShuffleSplit sss(0.5);
@@ -98,13 +98,13 @@ int main(int argc, char *argv[])
         TIMING_SECTION("Divisão dos dados", &medida);
 
         Mat<float> dadoDeTreinamento, dadoDeTeste;
-        vector<int> rotulosDeTreinamento, verdadeDoSolo;
+        vector<int> rotulosDeTreinamento, valorDeReferencia;
 
         indicePorLista<float>(dado, divisoes.first, dadoDeTreinamento);
         indicePorLista<float>(dado, divisoes.second, dadoDeTeste);
 
         indicePorLista<int>(rotulos, divisoes.first, rotulosDeTreinamento);
-        indicePorLista<int>(rotulos, divisoes.second, verdadeDoSolo);
+        indicePorLista<int>(rotulos, divisoes.second, valorDeReferencia);
 
         TIMING_SECTION("indexando", &medida);
 
@@ -112,20 +112,20 @@ int main(int argc, char *argv[])
         printf("\nExecutando OPF...\n");
 
         // Classificador de treinamento
-        SupervisedOPF<float> opf;
-        opf.fit(dadoDeTreinamento, rotulosDeTreinamento);
+        OPFSupervisionado<float> opf;
+        opf.ajusta(dadoDeTreinamento, rotulosDeTreinamento);
 
         TIMING_SECTION("Treinamento de OPF", &medida);
         times[0][i] = medida;
         
         // E previsão dos dados de teste
-        vector<int> previsoes = opf.predict(dadoDeTeste);
+        vector<int> previsoes = opf.prediz(dadoDeTeste);
 
         TIMING_SECTION("Testando OPF", &medida);
         times[1][i] = medida;
         
         // Medindo acurácia
-        float acc = acuracia(verdadeDoSolo, previsoes);
+        float acc = acuracia(valorDeReferencia, previsoes);
         printf("Acurácia: %.3f%%\n", acc * 100);
 
         // *********** Tempo de treinamento pré-computado ***********
@@ -139,20 +139,20 @@ int main(int argc, char *argv[])
         times[2][i] = medida;
 
         // Classificador de treinamento
-        SupervisedOPF<float> opf_precomp(true);
-        opf_precomp.fit(dadosDeTreinamentoPrecomp, rotulosDeTreinamento);
+        OPFSupervisionado<float> opf_precomp(true);
+        opf_precomp.ajusta(dadosDeTreinamentoPrecomp, rotulosDeTreinamento);
 
         TIMING_SECTION("OPF treinamento pré-computado", &medida);
         times[3][i] = medida;
         
         // E prevê os dados de teste
-        previsoes = opf_precomp.predict(dadosDeTestePrecomp);
+        previsoes = opf_precomp.prediz(dadosDeTestePrecomp);
 
         TIMING_SECTION("OPF teste pré-computado", &medida);
         times[4][i] = medida;
         
         // Mede acurácia
-        acc = acuracia(verdadeDoSolo, previsoes);
+        acc = acuracia(valorDeReferencia, previsoes);
         printf("Accuracy: %.3f%%\n", acc * 100);
 
         cout << "================================================\n" << endl;

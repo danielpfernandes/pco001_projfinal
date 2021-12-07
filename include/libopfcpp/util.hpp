@@ -70,10 +70,10 @@ void imprimeVetor(T* v, int tamanho)
 template <class T>
 void imprimeMatriz(Mat<T> m)
 {
-    for (int i = 0; i < m.rows; i++)
+    for (int i = 0; i < m.linhas; i++)
     {
-        T* row = m.row(i);
-        imprimeVetor(row, m.cols);
+        T* row = m.linha(i);
+        imprimeVetor(row, m.colunas);
         std::cout << '\n';
     }
     std::cout << std::endl;
@@ -91,13 +91,13 @@ template <class T>
 Mat<float> computaDistanciasDeTestes(const Mat<T>& dadosDeTeste, const Mat<T>& dadosDeTreinamento, funcaoDistancia<T> distancia=
 distanciaEuclidiana < T >)
 {
-    Mat<float> distances(dadosDeTeste.rows, dadosDeTreinamento.rows);
-    int vec_size = dadosDeTreinamento.cols;
+    Mat<float> distances(dadosDeTeste.linhas, dadosDeTreinamento.linhas);
+    int vec_size = dadosDeTreinamento.colunas;
 
     #pragma omp parallel for shared(dadosDeTreinamento, dadosDeTeste, distances)
     for (int i = 0; i < distances.rows; i++)
     {
-        for (int j = 0; j < distances.cols; j++)
+        for (int j = 0; j < distances.colunas; j++)
         {
             distances[i][j] = distancia(dadosDeTeste[i], dadosDeTreinamento[j], vec_size);
         }
@@ -199,8 +199,8 @@ bool lerRotuloDasMatrizes(const std::string& nomeDoArquivo, Mat<T>& dado, std::v
 template <class T>
 bool escreveMatriz(const std::string& nomeDoArquivo, const Mat<T>& dado)
 {
-    int linhas = static_cast<int>(dado.rows);
-    int colunas = static_cast<int>(dado.cols);
+    int linhas = static_cast<int>(dado.linhas);
+    int colunas = static_cast<int>(dado.colunas);
     if (linhas == 0 || colunas == 0)
     {
         std::cerr << "[util/escreveMatriz] Tamanho de dado inválido:" << linhas << ", " << colunas << std::endl;
@@ -238,11 +238,11 @@ bool escreveMatriz(const std::string& nomeDoArquivo, const Mat<T>& dado)
 template <class T>
 bool escreveRotuloDaMatriz(const std::string& nomeDoArquivo, const Mat<T>& dado, const std::vector<int>& rotulos)
 {
-    int rows = static_cast<int>(dado.rows);
-    int cols = static_cast<int>(dado.cols);
+    int rows = static_cast<int>(dado.linhas);
+    int cols = static_cast<int>(dado.colunas);
     if (rows == 0 || cols == 0)
     {
-        std::cerr << "[util/escreveRotuloDaMatriz] Invalid dado size:" << rows << ", " << cols << std::endl;
+        std::cerr << "[util/escreveRotuloDaMatriz] Invalid dado tamanho:" << rows << ", " << cols << std::endl;
         return false;
     }
 
@@ -377,33 +377,33 @@ template <class T>
 void indicePorLista(const Mat<T>& dado, const std::vector<int>& indices, Mat<T>& saida)
 {
     int size = (int) indices.size();
-    saida = Mat<T>(size, dado.cols);
+    saida = Mat<T>(size, dado.colunas);
 
     for (int i = 0; i < size; i++)
     {
-        for (int j = 0; j < dado.cols; j++)
+        for (int j = 0; j < dado.colunas; j++)
             saida[i][j] = dado[indices[i]][j];
     }
 }
 
 /**
- * Calcula a acurácia baseado na verdade do solo e nas previsões dos dados de teste
- * @param verdadeDoSolo verdade do solo
+ * Calcula a acurácia baseado no valor de referência e nas previsões dos dados de teste
+ * @param valorDeReferencia valor de referência
  * @param previsoes previsões dos dados de teste
  * @return o valor da acurácia
  */
-float acuracia(const std::vector<int>& verdadeDoSolo, const std::vector<int>& previsoes)
+float acuracia(const std::vector<int>& valorDeReferencia, const std::vector<int>& previsoes)
 {
-    if (verdadeDoSolo.size() != previsoes.size())
+    if (valorDeReferencia.size() != previsoes.size())
     {
-        std::cerr << "[util/acuracia] Error: a verdade do solo e os tamanhos de previsão não correspondem.. "
-                  << verdadeDoSolo.size() << " x " << previsoes.size() << std::endl;
+        std::cerr << "[util/acuracia] Error: o valor de referência e os tamanhos de previsão não correspondem.. "
+                  << valorDeReferencia.size() << " x " << previsoes.size() << std::endl;
     }
     
-    auto n = static_cast<float>(verdadeDoSolo.size());
+    auto n = static_cast<float>(valorDeReferencia.size());
     float acuracia = 0;
     for (int i = 0; i < n; i++)
-        if (verdadeDoSolo[i] == previsoes[i])
+        if (valorDeReferencia[i] == previsoes[i])
             acuracia++;
 
     return acuracia / n;

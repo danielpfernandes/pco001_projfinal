@@ -53,7 +53,7 @@ using uchar = unsigned char;
 #define INF std::numeric_limits<float>::infinity()
 #define NIL -1
 
-// Generic distance function
+// Função genérica de distância
 template <class T>
 using funcaoDistancia = std::function<T (const T*, const T*, size_t)>;
 
@@ -64,47 +64,73 @@ using funcaoDistancia = std::function<T (const T*, const T*, size_t)>;
 /*****************************************/
 
 ////////////
-// OPF types
-enum Type : unsigned char
+// Tipos de OPF
+enum Tipo : unsigned char
 {
-    Classifier = 1,
-    Clustering = 2,
+    Classificador = 1,
+    Agrupamento = 2,
 };
 
 //////////////////////
-// Serialization Flags
+// Flags de Serialização
 enum SFlags : unsigned char
 {
-    Sup_SavePrototypes = 1,
-    Unsup_Anomaly = 2,
+    Supervisionado_SalvaPrototipos = 1,
+    NaoSupervisionado_Anomalia = 2,
 };
 
 ///////////////
-// IO functions
+// Funções de IO
+/**
+ * Escreve em saída em formato binário
+ * @tparam T
+ * @param saida Saída (output)
+ * @param val valor a ser escrito
+ */
 template <class T>
-void write_bin(std::ostream& output, const T& val)
+void escreveBinario(std::ostream& saida, const T& val)
 {
-    output.write((char*) &val, sizeof(T));
+    saida.write((char*) &val, sizeof(T));
 }
 
+/**
+ * Escreve em saída em formato binário
+ * @tparam T
+ * @param saida Saída (output)
+ * @param val valor a ser escrito
+ * @param n número de referência ao valor a ser escrito (tamanho)
+ */
 template <class T>
-void write_bin(std::ostream& output, const T* val, int n=1)
+void escreveBinario(std::ostream& saida, const T* val, int n= 1)
 {
-    output.write((char*) val, sizeof(T) * n);
+    saida.write((char*) val, sizeof(T) * n);
 }
 
+/**
+ * Faz a leitura de dados binários
+ * @tparam T
+ * @param entrada Entrada (input)
+ * @return Dado convertido no tipo de origem
+ */
 template <class T>
-T read_bin(std::istream& input)
+T lerBinario(std::istream& entrada)
 {
     T val;
-    input.read((char*) &val, sizeof(T));
+    entrada.read((char*) &val, sizeof(T));
     return val;
 }
 
+/**
+ * Faz a leitura de dados binários
+ * @tparam T
+ * @param entrada Entrada (entrada)
+ * @param val valor do dado
+ * @param n referência (tamanho)
+ */
 template <class T>
-void read_bin(std::istream& input, T* val, int n=1)
+void lerbinario(std::istream& entrada, T* val, int n= 1)
 {
-    input.read((char*) val, sizeof(T) * n);
+    entrada.read((char*) val, sizeof(T) * n);
 }
 
 /*****************************************/
@@ -118,298 +144,301 @@ template <class T=float>
 class Mat
 {
 protected:
-    std::shared_ptr<T> data;
+    std::shared_ptr<T> dado;
 public:
-    size_t rows, cols;
-    size_t size;
-    size_t stride;
+    size_t linhas, colunas;
+    size_t tamanho;
+    size_t passo;
+
+    // Construtores
     Mat();
     Mat(const Mat<T>& other);
-    Mat(size_t rows, size_t cols);
-    Mat(size_t rows, size_t cols, T val0);
-    Mat(std::shared_ptr<T>& data, size_t rows, size_t cols, size_t stride = 0);
-    Mat(T* data, size_t rows, size_t cols, size_t stride=0);
+    Mat(size_t linhas, size_t colunas);
+    Mat(size_t linhas, size_t colunas, T val0);
+    Mat(std::shared_ptr<T>& dado, size_t linhas, size_t colunas, size_t passo = 0);
+    Mat(T* dado, size_t linhas, size_t colunas, size_t passo=0);
 
-    virtual T& at(size_t i, size_t j);
-    const virtual T at(size_t i, size_t j) const;
-    virtual T* row(size_t i);
-    const virtual T* row(size_t i) const;
+    // Protótipos
+    virtual T& em(size_t i, size_t j);
+    const virtual T em(size_t i, size_t j) const;
+    virtual T* linha(size_t i);
+    const virtual T* linha(size_t i) const;
     virtual T* operator[](size_t i);
     const virtual T* operator[](size_t i) const;
-    Mat<T>& operator=(const Mat<T>& other);
-    virtual Mat<T> copy();
+    Mat<T>& operator=(const Mat<T>& outro);
+    virtual Mat<T> copia();
 
-    void release();
+    void libera();
 };
 
 template <class T>
 Mat<T>::Mat()
 {
-    this->rows = this->cols = this->size = this->stride = 0;
+    this->linhas = this->colunas = this->tamanho = this->passo = 0;
 }
 
 template <class T>
 Mat<T>::Mat(const Mat<T>& other)
 {
-    this->rows = other.rows;
-    this->cols = other.cols;
-    this->size = other.size;
-    this->data = other.data;
-    this->stride = other.stride;
+    this->linhas = other.linhas;
+    this->colunas = other.colunas;
+    this->tamanho = other.tamanho;
+    this->dado = other.dado;
+    this->passo = other.passo;
 }
 
 template <class T>
-Mat<T>::Mat(size_t rows, size_t cols)
+Mat<T>::Mat(size_t linhas, size_t colunas)
 {
-    this->rows = rows;
-    this->cols = cols;
-    this->size = rows * cols;
-    this->stride = cols;
-    this->data = std::shared_ptr<T>(new T[this->size], std::default_delete<T[]>());
+    this->linhas = linhas;
+    this->colunas = colunas;
+    this->tamanho = linhas * colunas;
+    this->passo = colunas;
+    this->dado = std::shared_ptr<T>(new T[this->tamanho], std::default_delete<T[]>());
 }
 
 template <class T>
-Mat<T>::Mat(size_t rows, size_t cols, T val)
+Mat<T>::Mat(size_t linhas, size_t colunas, T val)
 {
-    this->rows = rows;
-    this->cols = cols;
-    this->size = rows * cols;
-    this->stride = cols;
-    this->data = std::shared_ptr<T>(new T[this->size], std::default_delete<T[]>());
+    this->linhas = linhas;
+    this->colunas = colunas;
+    this->tamanho = linhas * colunas;
+    this->passo = colunas;
+    this->dado = std::shared_ptr<T>(new T[this->tamanho], std::default_delete<T[]>());
 
-    for (size_t i = 0; i < rows; i++)
+    for (size_t i = 0; i < linhas; i++)
     {
-        T* row = this->row(i);
-        for (size_t j = 0; j < cols; j++)
-            row[j] = val;
+        T* linha = this->linha(i);
+        for (size_t j = 0; j < colunas; j++)
+            linha[j] = val;
     }
 }
 
 template <class T>
-Mat<T>::Mat(std::shared_ptr<T>& data, size_t rows, size_t cols, size_t stride)
+Mat<T>::Mat(std::shared_ptr<T>& dado, size_t linhas, size_t colunas, size_t passo)
 {
-    this->rows = rows;
-    this->cols = cols;
-    this->size = rows * cols;
-    this->data = data;
-    if (stride)
-        this->stride = stride;
+    this->linhas = linhas;
+    this->colunas = colunas;
+    this->tamanho = linhas * colunas;
+    this->dado = dado;
+    if (passo)
+        this->passo = passo;
     else
-        this->stride = cols;
+        this->passo = colunas;
 }
 
-// Receives a pointer to some data, which may not be deleted.
+// Recebe um ponteiro para algum dado, que pode não ser excluído.
 template <class T>
-Mat<T>::Mat(T* data, size_t rows, size_t cols, size_t stride)
+Mat<T>::Mat(T* dado, size_t linhas, size_t colunas, size_t passo)
 {
-    this->rows = rows;
-    this->cols = cols;
-    this->size = rows * cols;
-    this->data = std::shared_ptr<T>(data, [](T *p) {});
-    if (stride)
-        this->stride = stride;
+    this->linhas = linhas;
+    this->colunas = colunas;
+    this->tamanho = linhas * colunas;
+    this->dado = std::shared_ptr<T>(dado, [](T *p) {});
+    if (passo)
+        this->passo = passo;
     else
-        this->stride = cols;
+        this->passo = colunas;
 }
 
 template <class T>
-T& Mat<T>::at(size_t i, size_t j)
+T& Mat<T>::em(size_t i, size_t j)
 {
-    size_t idx = i * this->stride + j;
-    return this->data.get()[idx];
+    size_t indice = i * this->passo + j;
+    return this->dado.get()[indice];
 }
 
 template <class T>
-const T Mat<T>::at(size_t i, size_t j) const
+const T Mat<T>::em(size_t i, size_t j) const
 {
-    size_t idx = i * this->stride + j;
-    return this->data.get()[idx];
+    size_t indice = i * this->passo + j;
+    return this->dado.get()[indice];
 }
 
 template <class T>
-T* Mat<T>::row(size_t i)
+T* Mat<T>::linha(size_t i)
 {
-    size_t idx = i * this->stride;
-    return this->data.get() + idx;
+    size_t indice = i * this->passo;
+    return this->dado.get() + indice;
 }
 
 template <class T>
-const T* Mat<T>::row(size_t i) const
+const T* Mat<T>::linha(size_t i) const
 {
-    size_t idx = i * this->stride;
-    return this->data.get() + idx;
+    size_t indice = i * this->passo;
+    return this->dado.get() + indice;
 }
 
 template <class T>
 T* Mat<T>::operator[](size_t i)
 {
-    size_t idx = i * this->stride;
-    return this->data.get() + idx;
+    size_t indice = i * this->passo;
+    return this->dado.get() + indice;
 }
 
 template <class T>
 const T* Mat<T>::operator[](size_t i) const
 {
-    size_t idx = i * this->stride;
-    return this->data.get() + idx;
+    size_t indice = i * this->passo;
+    return this->dado.get() + indice;
 }
 
 template <class T>
-Mat<T>& Mat<T>::operator=(const Mat<T>& other)
+Mat<T>& Mat<T>::operator=(const Mat<T>& outro)
 {
-    if (this != &other)
+    if (this != &outro)
     {
-        this->rows = other.rows;
-        this->cols = other.cols;
-        this->size = other.size;
-        this->data = other.data;
-        this->stride = other.stride;
+        this->linhas = outro.linhas;
+        this->colunas = outro.colunas;
+        this->tamanho = outro.tamanho;
+        this->dado = outro.dado;
+        this->passo = outro.passo;
     }
 
     return *this;
 }
 
 template <class T>
-Mat<T> Mat<T>::copy()
+Mat<T> Mat<T>::copia()
 {
-    Mat<T> out(this->rows, this->cols);
-    for (size_t i = 0; i < this->rows; i++)
+    Mat<T> out(this->linhas, this->colunas);
+    for (size_t i = 0; i < this->linhas; i++)
     {
-        T* row = this->row(i);
-        T* outrow = out.row(i);
-        for (size_t j = 0; j < this->cols; j++)
-            outrow[j] = row[j];
+        T* linha = this->linha(i);
+        T* linhaExterna = out.linha(i);
+        for (size_t j = 0; j < this->colunas; j++)
+            linhaExterna[j] = linha[j];
     }
 
     return std::move(out);
 }
 
 template <class T>
-void Mat<T>::release()
+void Mat<T>::libera()
 {
-    this->data.reset();
+    this->dado.reset();
 }
 
 /*****************************************/
 
 
-// Default distance function
+// Função de distância padrão
 template <class T>
-T distanciaEuclidiana(const T* a, const T* b, size_t size)
+T distanciaEuclidiana(const T* a, const T* b, size_t tamanho)
 {
-    T sum = 0;
-    for (size_t i = 0; i < size; i++)
+    T soma = 0;
+    for (size_t i = 0; i < tamanho; i++)
     {
-        sum += (a[i]-b[i]) * (a[i]-b[i]);
+        soma += (a[i] - b[i]) * (a[i] - b[i]);
     }
-    return (T)sqrt(sum);
+    return (T)sqrt(soma);
 }
 
 template <class T>
-T magnitude(const T* v, size_t size)
+T magnitude(const T* v, size_t tamanho)
 {
-    T sum = 0;
-    for (size_t i = 0; i < size; i++)
+    T soma = 0;
+    for (size_t i = 0; i < tamanho; i++)
     {
-        sum += v[i] * v[i];
+        soma += v[i] * v[i];
     }
-    return (T)sqrt(sum);
+    return (T)sqrt(soma);
 }
 
-// One alternate distance function
+// Uma função de distância alternativa
 template <class T>
-T cosine_distance(const T* a, const T* b, size_t size)
+T distanciaDeCosseno(const T* a, const T* b, size_t tamanho)
 {
-    T dividend = 0;
-    for (size_t i = 0; i < size; i++)
+    T dividendo = 0;
+    for (size_t i = 0; i < tamanho; i++)
     {
-        dividend += a[i] * b[i];
+        dividendo += a[i] * b[i];
     }
 
-    T divisor = magnitude<T>(a, size) * magnitude<T>(b, size);
+    T divisor = magnitude<T>(a, tamanho) * magnitude<T>(b, tamanho);
 
-    // 1 - cosine similarity
-    return 1 - (dividend / divisor);
+    // 1 - similaridade cosseno
+    return 1 - (dividendo / divisor);
 }
 
 template <class T>
-Mat<T> computaDistanciasDeTreinamento(const Mat<T> &features, funcaoDistancia<T> distance= distanciaEuclidiana<T>)
+Mat<T> computaDistanciasDeTreinamento(const Mat<T> &caracteristicas, funcaoDistancia<T> distancia= distanciaEuclidiana<T>)
 {
-    Mat<float> distances(features.rows, features.rows);
+    Mat<float> distancias(caracteristicas.linhas, caracteristicas.linhas);
 
-    #pragma omp parallel for shared(features, distances)
-    for (size_t i = 0; i < features.rows - 1; i++)
+    #pragma omp parallel for shared(caracteristicas, distancias)
+    for (size_t i = 0; i < caracteristicas.linhas - 1; i++)
     {
-        distances[i][i] = 0;
-        for (size_t j = i + 1; j < features.rows; j++)
+        distancias[i][i] = 0;
+        for (size_t j = i + 1; j < caracteristicas.linhas; j++)
         {
-            distances[i][j] = distances[j][i] = distance(features[i], features[j], features.cols);
+            distancias[i][j] = distancias[j][i] = distancia(caracteristicas[i], caracteristicas[j], caracteristicas.colunas);
         }
     }
 
-    return distances;
+    return distancias;
 }
 
 
-/*****************************************/
-/********* Distance matrix type **********/
-/*****************************************/
-// Instead of storing n x n elements, we only store the upper triangle,
-// which has (n * (n-1))/2 elements (less than half).
+/************************************************/
+/********* Tipo de matriz de distância **********/
+/************************************************/
+// Em vez de armazenar elementos n x n, só armazenamos o triângulo superior,
+// que tem (n -1)/2 elementos (menos da metade).
 template <class T>
 class DistMat: public Mat<T>
 {
 private:
     T diag_vals = static_cast<T>(0);
-    int get_index(int i, int j) const;
+    int buscaIndice(int i, int j) const;
 public:
-    DistMat(){this->rows = this->cols = this->size = 0;};
-    DistMat(const DistMat& other);
-    DistMat(const Mat<T>& features, funcaoDistancia<T> distance=distanciaEuclidiana<T>);
-    virtual T& at(size_t i, size_t j);
+    DistMat(){ this->linhas = this->colunas = this->tamanho = 0;};
+    DistMat(const DistMat& outro);
+    DistMat(const Mat<T>& caracteristicas, funcaoDistancia<T> distancia=distanciaEuclidiana<T>);
+    virtual T& em(size_t i, size_t j);
     const virtual T at(size_t i, size_t j) const;
 };
 
-// The first row has n-1 cols, the second has n-2, and so on until row n has 0 cols.
-// This way,
+// A primeira linha tem n-1 colunas, a segunda tem n-2, e assim por diante até linha n tem 0 colunas.
+// Assim
 #define SWAP(a, b) (((a) ^= (b)), ((b) ^= (a)), ((a) ^= (b)))
 template <class T>
-inline int DistMat<T>::get_index(int i, int j) const
+inline int DistMat<T>::buscaIndice(int i, int j) const
 {
     if (i > j)
         SWAP(i, j);
-    return ((((this->rows<<1) - i - 1) * i) >> 1) + (j - i - 1);
+    return ((((this->linhas << 1) - i - 1) * i) >> 1) + (j - i - 1);
 }
 
 template <class T>
-DistMat<T>::DistMat(const DistMat& other)
+DistMat<T>::DistMat(const DistMat& outro)
 {
-    this->rows = other.rows;
-    this->cols = other.cols;
-    this->size = other.size;
-    this->data = other.data;
+    this->linhas = outro.linhas;
+    this->colunas = outro.colunas;
+    this->tamanho = outro.tamanho;
+    this->dado = outro.dado;
 }
 
 template <class T>
-DistMat<T>::DistMat(const Mat<T>& features, funcaoDistancia<T> distance)
+DistMat<T>::DistMat(const Mat<T>& caracteristicas, funcaoDistancia<T> distancia)
 {
-    this->rows = features.rows;
-    this->cols = features.rows;
-    this->size = (this->rows * (this->rows - 1)) / 2;
-    this->data = std::shared_ptr<T>(new float[this->size], std::default_delete<float[]>());
-    for (size_t i = 0; i < this->rows; i++)
+    this->linhas = caracteristicas.linhas;
+    this->colunas = caracteristicas.linhas;
+    this->tamanho = (this->linhas * (this->linhas - 1)) / 2;
+    this->dado = std::shared_ptr<T>(new float[this->tamanho], std::default_delete<float[]>());
+    for (size_t i = 0; i < this->linhas; i++)
     {
-        for (size_t j = i+1; j < this->rows; j++)
-            this->data.get()[get_index(i, j)] = distance(features[i], features[j], features.cols);
+        for (size_t j = i+1; j < this->linhas; j++)
+            this->dado.get()[buscaIndice(i, j)] = distancia(caracteristicas[i], caracteristicas[j], caracteristicas.colunas);
     }
 }
 
 template <class T>
-T& DistMat<T>::at(size_t i, size_t j)
+T& DistMat<T>::em(size_t i, size_t j)
 {
     if (i == j)
         return this->diag_vals = static_cast<T>(0);
-    return this->data.get()[this->get_index(i, j)];
+    return this->dado.get()[this->buscaIndice(i, j)];
 }
 
 template <class T>
@@ -417,131 +446,152 @@ const T DistMat<T>::at(size_t i, size_t j) const
 {
     if (i == j)
         return 0;
-    return this->data.get()[this->get_index(i, j)];
+    return this->dado.get()[this->buscaIndice(i, j)];
 }
 
 
-/*****************************************/
-/************ Data structures ************/
-/*****************************************/
+/*********************************************/
+/************ Estruturas de Dados ************/
+/*********************************************/
 
 /**
- * Color codes for Prim's algorithm
+ * Códigos de cores para o algoritmo de Prim
  */
 enum Color{
-    WHITE, // New node
-    GRAY,  // On the heap
-    BLACK  // Already seen
+    BRANCO, // Novo nó
+    CINZA,  // Na heap
+    PRETO  // Já visto
 };
 
 /**
- * Plain class to store node information
+ * Classe simples para armazenar informações de nó
  */
-class Node
+class Nodo
 {
 public:
-    Node()
+    Nodo()
     {
-        this->color = WHITE;
-        this->pred = -1;
-        this->cost = INF;
-        this->is_prototype = false;
+        this->cor = BRANCO;
+        this->predecessor = -1;
+        this->custo = INF;
+        this->isPrototipo = false;
     }
 
-    size_t index;      // Index on the list -- makes searches easier *
-    Color color;       // Color on the heap. white: never visiter, gray: on the heap, black: removed from the heap *
-    float cost;        // Cost to reach the node
-    int true_label;    // Ground truth *
-    int label;         // Assigned label
-    int pred;          // Predecessor node *
-    bool is_prototype; // Whether the node is a prototype *
+    size_t indice;      // Índice na lista - facilita as pesquisas
+    Color cor;          // Cor na heap. branco: nunca visitada, cinza: na heap, preto: removido da heap
+    float custo;        // Custo para alcançar o nó
+    int rotuloVerdade;  // Valor de referência
+    int rotulo;         // Rótulo atribuído
+    int predecessor;    // Nó antecessor
+    bool isPrototipo;   // Se o nó é um protótipo
 };
 
 /**
- * Heap data structure to use as a priority queue
+ * Estrutura de dados de heap para usar como uma fila de prioridade
  *
  */
-class Heap
+class heap
 {
 private:
-    std::vector<Node> *nodes; // A reference for the original container vector
-    std::vector<Node*> vec;   // A vector of pointers to build the heap upon
+    std::vector<Nodo> *nodos; // Uma referência para o vetor de contêiner original
+    std::vector<Nodo*> vec;   // Um vetor de ponteiros para construir a heap em cima
 
-    static bool compare_element(const Node* lhs, const Node* rhs)
+    static bool comparaElemento(const Nodo* estruturaHeapEsquerda, const Nodo* estruturaHeapDireita)
     {
-        return lhs->cost >= rhs->cost;
+        return estruturaHeapEsquerda->custo >= estruturaHeapDireita->custo;
     }
 
 public:
-    // Size-constructor
-    Heap(std::vector<Node> *nodes, const std::vector<int> &labels)
+    // Construtor de tamanho
+    heap(std::vector<Nodo> *nodos, const std::vector<int> &rotulos)
     {
-        this->nodes = nodes;
-        size_t n = nodes->size();
+        this->nodos = nodos;
+        size_t n = nodos->size();
         this->vec.reserve(n);
         for (size_t i = 0; i < n; i++)
         {
-            (*this->nodes)[i].index = i;
-            (*this->nodes)[i].true_label = (*this->nodes)[i].label = labels[i];
+            (*this->nodos)[i].indice = i;
+            (*this->nodos)[i].rotuloVerdade = (*this->nodos)[i].rotulo = rotulos[i];
         }
     }
-    // Insert new element into heap
-    void push(int item, float cost)
+    /**
+     * Insere o novo elemento na heap
+     * @param item elemento
+     * @param custo custo
+     */
+    void push(int item, float custo)
     {
-        // Update node's cost value
-        (*this->nodes)[item].cost = cost;
+        // Atualiza o valor de custo do nó
+        (*this->nodos)[item].custo = custo;
 
-        // Already on the heap
-        if ((*this->nodes)[item].color == GRAY)
-            make_heap(this->vec.begin(), this->vec.end(), compare_element); // Remake the heap
+        // Já presente na heap
+        if ((*this->nodos)[item].cor == CINZA)
+            make_heap(this->vec.begin(), this->vec.end(), comparaElemento); // Remake the heap
 
-        // New to the heap
-        else if ((*this->nodes)[item].color == WHITE)
+        // Novo na heap
+        else if ((*this->nodos)[item].cor == BRANCO)
         {
-            (*this->nodes)[item].color = GRAY;
-            this->vec.push_back(&(*this->nodes)[item]);
-            push_heap(this->vec.begin(), this->vec.end(), compare_element); // Push new item to the heap
+            (*this->nodos)[item].cor = CINZA;
+            this->vec.push_back(&(*this->nodos)[item]);
+            push_heap(this->vec.begin(), this->vec.end(), comparaElemento); // Push new item to the heap
         }
         // Note that black items can not be inserted into the heap
     }
 
-    // Update item's cost without updating the heap
-    void update_cost(int item, float cost)
+    /**
+     * Atualiza o custo do item sem atualizar a heap
+     * @param item item
+     * @param custo custo
+     */
+    void atualizaCusto(int item, float custo)
     {
-        // Update node's cost value
-        (*this->nodes)[item].cost = cost;
-        if ((*this->nodes)[item].color == WHITE)
+        // Atualiza o valor de custo do nó
+        (*this->nodos)[item].custo = custo;
+        if ((*this->nodos)[item].cor == BRANCO)
         {
-            (*this->nodes)[item].color = GRAY;
-            this->vec.push_back(&(*this->nodes)[item]);
+            (*this->nodos)[item].cor = CINZA;
+            this->vec.push_back(&(*this->nodos)[item]);
         }
     }
 
-    // Update the heap.
-    // This is used after multiple calls to update_cost in order to reduce the number of calls to make_heap.
+    /**
+     * Atualiza a heap.
+     * Isso é usado após várias chamadas para atualizaCusto, a fim de reduzir o número de chamadas para make_heap.
+     */
     void heapify()
     {
-        make_heap(this->vec.begin(), this->vec.end(), compare_element); // Remake the heap
+        make_heap(this->vec.begin(), this->vec.end(), comparaElemento); // Remake the heap
     }
 
-    // Remove and return the first element of the heap
+    /**
+     * Remova e devolva o primeiro elemento da heap
+     * @return primeiro elemento da heap
+     */
     int pop()
     {
-        // Obtain and mark the first element
-        Node *front = this->vec.front();
-        front->color = BLACK;
-        // Remove it from the heap
-        pop_heap(this->vec.begin(), this->vec.end(), compare_element);
+        // Obtém e marca o primeiro elemento
+        Nodo *frente = this->vec.front();
+        frente->cor = PRETO;
+        // O remove da heap
+        pop_heap(this->vec.begin(), this->vec.end(), comparaElemento);
         this->vec.pop_back();
-        // And return it
-        return front->index;
+        // E o retorna
+        return frente->indice;
     }
 
-    bool empty()
+    /**
+     * Verifica se a heap está vazia
+     * @return true se estive vazia
+     */
+    bool isVazia()
     {
         return this->vec.size() == 0;
     }
 
+    /**
+     * Verifica tamanho da heap
+     * @return tamanho da heap
+     */
     size_t size()
     {
         return this->vec.size();
@@ -556,205 +606,208 @@ public:
 /****************** OPF ******************/
 /*****************************************/
 
-/******** Supervised ********/
+/******** Supervisionado ********/
 template <class T=float>
-class SupervisedOPF
+class OPFSupervisionado
 {
 private:
-    // Model
-    Mat<T> train_data; // Training data (original vectors or distance matrix)
-    std::vector<Node> nodes; // Learned model
-    // List of nodes ordered by cost. Useful for speeding up classification
-    // Its not size_t to reduce memory usage, since ML may handle large data
-    std::vector<unsigned int> ordered_nodes;
+    // Modelo
+    Mat<T> dadoDeTreinamento; // Dados de treinamento (vetores originais ou matriz de distância)
+    std::vector<Nodo> nodos;  // Modelo aprendido
 
-    // Options
-    bool precomputed;
-    funcaoDistancia<T> distance;
+    // Lista de nós ordenados pelo custo. Útil para acelerar a classificação
+    // Não é definido com size_t para reduzir o uso de memória, uma vez que o ML pode lidar com dados grandes
+    std::vector<unsigned int> nodosOrdenados;
 
-    void prim_prototype(const std::vector<int> &labels);
+    // Opções
+    bool isPrecomputado;
+    funcaoDistancia<T> distancia;
+
+    void prototipoDePrim(const std::vector<int> &rotulos);
 
 
 public:
-    SupervisedOPF(bool precomputed=false, funcaoDistancia<T> distance=distanciaEuclidiana<T>);
+    OPFSupervisionado(bool isPrecomputado=false, funcaoDistancia<T> distancia=distanciaEuclidiana<T>);
 
-    void fit(const Mat<T> &train_data, const std::vector<int> &labels);
-    std::vector<int> predict(const Mat<T> &test_data);
+    void ajusta(const Mat<T> &dadoDeTreinamento, const std::vector<int> &rotulos);
+    std::vector<int> prediz(const Mat<T> &dadoDeTeste);
 
-    bool get_precomputed() {return this->precomputed;}
+    bool getPrecomputado() {return this->isPrecomputado;}
 
-    // Serialization functions
-    std::string serialize(uchar flags=0);
-    static SupervisedOPF<T> unserialize(const std::string& contents);
+    // Funções de serialização
+    std::string serializa(uchar flags= 0);
+    static OPFSupervisionado<T> desserializa(const std::string& conteudos);
 
-    // Training information
-    std::vector<std::vector<float>> get_prototypes();
+    // Informações de treinamento
+    std::vector<std::vector<float>> getPrototipos();
 };
 
 template <class T>
-SupervisedOPF<T>::SupervisedOPF(bool precomputed, funcaoDistancia<T> distance)
+OPFSupervisionado<T>::OPFSupervisionado(bool isPrecomputado, funcaoDistancia<T> distancia)
 {
-    this->precomputed = precomputed;
-    this->distance = distance;
+    this->isPrecomputado = isPrecomputado;
+    this->distancia = distancia;
 }
 
 /**
- * - The first step in OPF's training procedure. Finds the prototype nodes using Prim's
- * Minimum Spanning Tree algorithm.
- * - Any node with an adjacent node of a different class is taken as a prototype.
+ * - O primeiro passo no procedimento de treinamento da OPF. Encontra o nós protótipos
+ *   usando o algoritmo da Árvore Geradora Mínima de Prim.
+ * - Qualquer nó com um nó adjacente de uma classe diferente é tomado como um protótipo.
+ * @tparam T
+ * @param rotulos Rótulos dos dados
  */
 template <class T>
-void SupervisedOPF<T>::prim_prototype(const std::vector<int> &labels)
+void OPFSupervisionado<T>::prototipoDePrim(const std::vector<int> &rotulos)
 {
-    this->nodes = std::vector<Node>(this->train_data.rows);
-    Heap h(&this->nodes, labels); // Heap as a priority queue
+    this->nodos = std::vector<Nodo>(this->dadoDeTreinamento.linhas);
+    heap cabeca(&this->nodos, rotulos); // heap como uma fila de prioridades
 
-    // Arbitrary first node
-    h.push(0, 0);
+    // Primeiro nó arbitrário
+    cabeca.push(0, 0);
 
-    while(!h.empty())
+    while(!cabeca.isVazia())
     {
-        // Gets the head of the heap and marks it black
-        size_t s = h.pop();
+        // Pega a cabeça da heap e marca-a preta
+        size_t s = cabeca.pop();
 
-        // Prototype definition
-        int pred = this->nodes[s].pred;
+        // Definição de protótipo
+        int pred = this->nodos[s].predecessor;
         if (pred != NIL)
         {
-            // Find points in the border between two classes...
-            if (this->nodes[s].true_label != this->nodes[pred].true_label)
+            // Encontra pontos na fronteira entre duas classes...
+            if (this->nodos[s].rotuloVerdade != this->nodos[pred].rotuloVerdade)
             {
-                // And set them as prototypes
-                this->nodes[s].is_prototype = true;
-                this->nodes[pred].is_prototype = true;
+                // E os define como protótipos
+                this->nodos[s].isPrototipo = true;
+                this->nodos[pred].isPrototipo = true;
             }
         }
 
 
-        // Edge selection
+        // Seleção de arestas
         #pragma omp parallel for default(shared)
-        for (size_t t = 0; t < this->nodes.size(); t++)
+        for (size_t t = 0; t < this->nodos.size(); t++)
         {
-            // If nodes are different and t has not been poped out of the heap (marked black)
-            if (s != t && this->nodes[t].color != BLACK) // TODO if s == t, t is black
+            // Se os nós são diferentes e t não foi retirado da heap (marcado preto)
+            if (s != t && this->nodos[t].cor != PRETO)
             {
-                // Compute weight
-                float weight;
-                if (this->precomputed)
-                    weight = this->train_data[s][t];
+                // Calcula o peso
+                float peso;
+                if (this->isPrecomputado)
+                    peso = this->dadoDeTreinamento[s][t];
                 else
-                    weight = this->distance(this->train_data[s], this->train_data[t], this->train_data.cols);
+                    peso = this->distancia(this->dadoDeTreinamento[s], this->dadoDeTreinamento[t], this->dadoDeTreinamento.colunas);
 
-                // Assign if smaller than current value
-                if (weight < this->nodes[t].cost)
+                // Atribui se menor do que o valor atual
+                if (peso < this->nodos[t].custo)
                 {
-                    this->nodes[t].pred = static_cast<int>(s);
-                    // h.push(t, weight);
+                    this->nodos[t].predecessor = static_cast<int>(s);
+                    // cabeca.push(t, peso);
                     #pragma omp critical(updateHeap)
-                    h.update_cost(t, weight);
+                    cabeca.atualizaCusto(t, peso);
                 }
             }
         }
-        h.heapify();
+        cabeca.heapify();
     }
 }
 
 /**
- * Trains the model with the given data and labels.
- *
- * Inputs:
- *  - train_data:
- *    - original feature vectors [n_samples, n_features] -- if precomputed == false
- *    - distance matrix          [n_samples, n_samples]  -- if precomputed == true
- *  - labels:
- *    - true label values        [n_samples]
+ * Treina o modelo com o dado dado e rotulos.
+ * @tparam T
+ * @param dadoDeTreinamento
+ *          - vetores de recurso original [n_samples, n_features] -- se isPrecomputado == false
+ *          - matriz de distancia [n_samples, n_samples] -- se isPrecomputado == true
+ * @param rotulos
+ *          - valores dos rotulo-verdade [n_samples]
  */
 template <class T>
-void SupervisedOPF<T>::fit(const Mat<T> &train_data, const std::vector<int> &labels)
+void OPFSupervisionado<T>::ajusta(const Mat<T> &dadoDeTreinamento, const std::vector<int> &rotulos)
 {
-    if ((size_t)train_data.rows != labels.size())
-        throw std::invalid_argument("[OPF/fit] Error: data size does not match labels size: " + std::to_string(train_data.rows) + " x " + std::to_string(labels.size()));
+    if ((size_t)dadoDeTreinamento.linhas != rotulos.size())
+        throw std::invalid_argument("[OPF/ajusta] Erro: tamanho dos dados não correspondem ao tamanho dos rótulos"
+        + std::to_string(dadoDeTreinamento.linhas) + " x " + std::to_string(rotulos.size()));
 
-    // Store data reference for testing
-    this->train_data = train_data;
+    // Armazenar referência de dados para testes
+    this->dadoDeTreinamento = dadoDeTreinamento;
 
-    // Initialize model
-    this->prim_prototype(labels); // Find prototypes
-    Heap h(&this->nodes, labels); // Heap as a priority queue
+    // Modelo de inicialização
+    this->prototipoDePrim(rotulos); // Encontra protótipos
+    heap cabeca(&this->nodos, rotulos); // heap como uma fila de prioridade
 
-    // Initialization
-    for (Node& node: this->nodes)
+    // Inicialização
+    for (Nodo& nodo: this->nodos)
     {
-        node.color = WHITE;
-        // Prototypes cost 0, have no predecessor and populate the heap
-        if (node.is_prototype)
+        nodo.cor = BRANCO;
+        // Protótipos custo 0, não ter antecessor e povoar o heap
+        if (nodo.isPrototipo)
         {
-            node.pred = NIL;
-            node.cost = 0;
+            nodo.predecessor = NIL;
+            nodo.custo = 0;
         }
-        else // Other nodes start with cost = INF
+        else // Outros nós iniciam com custo = INF
         {
-            node.cost = INF;
+            nodo.custo = INF;
         }
-        // Since all nodes are connected to all the others
-        h.push(node.index, node.cost);
+        // Uma vez que todos os nós estão conectados a todos os outros
+        cabeca.push(nodo.indice, nodo.custo);
     }
 
-    // List of nodes ordered by cost
-    // Useful for speeding up classification
-    this->ordered_nodes.reserve(this->nodes.size());
+    // Lista de nós ordenados por custo
+    // Útil para acelerar a classificação
+    this->nodosOrdenados.reserve(this->nodos.size());
 
-    // Consume the queue
-    while(!h.empty())
+    // consome a fila
+    while(!cabeca.isVazia())
     {
-        int s = h.pop();
-        this->ordered_nodes.push_back(s);
+        int s = cabeca.pop();
+        this->nodosOrdenados.push_back(s);
 
-        // Iterate over all neighbors
+        // Itera sobre todos os vizinhos
         #pragma omp parallel for default(shared)
-        for (int t = 0; t < (int) this->nodes.size(); t++)
+        for (int t = 0; t < (int) this->nodos.size(); t++)
         {
-            if (s != t && this->nodes[s].cost < this->nodes[t].cost) // && this->nodes[t].color != BLACK ??
+            if (s != t && this->nodos[s].custo < this->nodos[t].custo)
             {
-                // Compute weight
-                float weight;
-                if (precomputed)
-                    weight = this->train_data[s][t];
+                // Computa o peso
+                float peso;
+                if (isPrecomputado)
+                    peso = this->dadoDeTreinamento[s][t];
                 else
-                    weight = distance(this->train_data[s], this->train_data[t], this->train_data.cols);
+                    peso = distancia(this->dadoDeTreinamento[s], this->dadoDeTreinamento[t], this->dadoDeTreinamento.colunas);
 
-                float cost = std::max(weight, this->nodes[s].cost);
-                if (cost < this->nodes[t].cost)
+                float cost = std::max(peso, this->nodos[s].custo);
+                if (cost < this->nodos[t].custo)
                 {
-                    this->nodes[t].pred = s;
-                    this->nodes[t].label = this->nodes[s].true_label;
-                    // h.push(t, cost);
+                    this->nodos[t].predecessor = s;
+                    this->nodos[t].rotulo = this->nodos[s].rotuloVerdade;
+
                     #pragma omp critical(updateHeap)
-                    h.update_cost(t, cost);
+                    cabeca.atualizaCusto(t, cost);
                 }
             }
         }
-        h.heapify();
+        cabeca.heapify();
     }
 }
 
 /**
- * Classify a set of samples using a model trained by SupervisedOPF::fit.
+ * Classify a set of samples using a model trained by OPFSupervisionado::ajusta.
  *
  * Inputs:
- *  - test_data:
- *    - original feature vectors [n_test_samples, n_features]      -- if precomputed == false
- *    - distance matrix          [n_test_samples, n_train_samples] -- if precomputed == true
+ *  - dadoDeTeste:
+ *    - original feature vectors [n_test_samples, n_features]      -- if isPrecomputado == false
+ *    - distancia matrix          [n_test_samples, n_train_samples] -- if isPrecomputado == true
  *
  * Returns:
  *  - predictions:
- *    - a vector<int> of size [n_test_samples] with classification outputs.
+ *    - a vector<int> of tamanho [n_test_samples] with classification outputs.
  */
 template <class T>
-std::vector<int> SupervisedOPF<T>::predict(const Mat<T> &test_data)
+std::vector<int> OPFSupervisionado<T>::prediz(const Mat<T> &dadoDeTeste)
 {
-    int n_test_samples = (int) test_data.rows;
-    int n_train_samples = (int) this->nodes.size();
+    int n_test_samples = (int) dadoDeTeste.linhas;
+    int n_train_samples = (int) this->nodos.size();
 
     // Output predictions
     std::vector<int> predictions(n_test_samples);
@@ -762,26 +815,26 @@ std::vector<int> SupervisedOPF<T>::predict(const Mat<T> &test_data)
     #pragma omp parallel for default(shared)
     for (int i = 0; i < n_test_samples; i++)
     {
-        int idx = this->ordered_nodes[0];
+        int idx = this->nodosOrdenados[0];
         int min_idx = 0;
         T min_cost = INF;
         T weight = 0;
 
-        // 'ordered_nodes' contains sample indices ordered by cost, so if the current
+        // 'nodosOrdenados' contains sample indices ordered by custo, so if the current
         // best connection costs less than the next node, it is useless to keep looking.
-        for (int j = 0; j < n_train_samples && min_cost > this->nodes[idx].cost; j++)
+        for (int j = 0; j < n_train_samples && min_cost > this->nodos[idx].custo; j++)
         {
             // Get the next node in the ordered list
-            idx = this->ordered_nodes[j];
+            idx = this->nodosOrdenados[j];
 
-            // Compute its distance to the query point
-            if (precomputed)
-                weight = test_data[i][idx];
+            // Compute its distancia to the query point
+            if (isPrecomputado)
+                weight = dadoDeTeste[i][idx];
             else
-                weight = distance(test_data[i], this->train_data[idx], this->train_data.cols);
+                weight = distancia(dadoDeTeste[i], this->dadoDeTreinamento[idx], this->dadoDeTreinamento.colunas);
 
-            // The cost corresponds to the max between the distance and the reference cost
-            float cost = std::max(weight, this->nodes[idx].cost);
+            // The custo corresponds to the max between the distancia and the reference custo
+            float cost = std::max(weight, this->nodos[idx].custo);
 
             if (cost < min_cost)
             {
@@ -790,7 +843,7 @@ std::vector<int> SupervisedOPF<T>::predict(const Mat<T> &test_data)
             }
         }
 
-        predictions[i] = this->nodes[min_idx].label;
+        predictions[i] = this->nodos[min_idx].rotulo;
     }
 
     return predictions;
@@ -801,62 +854,62 @@ std::vector<int> SupervisedOPF<T>::predict(const Mat<T> &test_data)
 /*****************************************/
 
 template <class T>
-std::string SupervisedOPF<T>::serialize(uchar flags)
+std::string OPFSupervisionado<T>::serializa(uchar flags)
 {
-    if (this->precomputed)
-        throw std::invalid_argument("Serialization for precomputed OPF not implemented yet");
+    if (this->isPrecomputado)
+        throw std::invalid_argument("Serialization for isPrecomputado OPF not implemented yet");
     // Open file
     std::ostringstream output(std::ios::out | std::ios::binary);
 
-    int n_samples = this->train_data.rows;
-    int n_features = this->train_data.cols;
+    int n_samples = this->dadoDeTreinamento.linhas;
+    int n_features = this->dadoDeTreinamento.colunas;
 
     // Header
-    write_bin<char>(output, "OPF", 3);
-    write_bin<uchar>(output, Type::Classifier);
-    write_bin<uchar>(output, flags);
-    write_bin<uchar>(output, static_cast<uchar>(0)); // Reserved flags byte
-    write_bin<int>(output, n_samples);
-    write_bin<int>(output, n_features);
+    escreveBinario<char>(output, "OPF", 3);
+    escreveBinario<uchar>(output, Tipo::Classificador);
+    escreveBinario<uchar>(output, flags);
+    escreveBinario<uchar>(output, static_cast<uchar>(0)); // Reserved flags byte
+    escreveBinario<int>(output, n_samples);
+    escreveBinario<int>(output, n_features);
 
     // Data
     for (int i = 0; i < n_samples; i++)
     {
-        const T* data = this->train_data.row(i);
-        write_bin<T>(output, data, n_features);
+        const T* data = this->dadoDeTreinamento.linha(i);
+        escreveBinario<T>(output, data, n_features);
     }
 
     // Nodes
     for (int i = 0; i < n_samples; i++)
     {
-        write_bin<float>(output, this->nodes[i].cost);
-        write_bin<int>(output, this->nodes[i].label);
+        escreveBinario<float>(output, this->nodos[i].custo);
+        escreveBinario<int>(output, this->nodos[i].rotulo);
     }
 
     // Ordered_nodes
-    write_bin<unsigned int>(output, this->ordered_nodes.data(), n_samples);
+    escreveBinario<unsigned int>(output, this->nodosOrdenados.data(), n_samples);
 
     // Prototypes
-    if (flags & SFlags::Sup_SavePrototypes)
+    if (flags & SFlags::Supervisionado_SalvaPrototipos)
     {
         // Find which are prototypes first, because we need the correct amount
         std::set<int> prots;
         for (int i = 0; i < n_samples; i++)
         {
-            if (this->nodes[i].is_prototype)
+            if (this->nodos[i].isPrototipo)
                 prots.insert(i);
         }
 
-        write_bin<int>(output, prots.size());
+        escreveBinario<int>(output, prots.size());
         for (auto it = prots.begin(); it != prots.end(); ++it)
-            write_bin<int>(output, *it);
+            escreveBinario<int>(output, *it);
     }
 
     return output.str();
 }
 
 template <class T>
-SupervisedOPF<T> SupervisedOPF<T>::unserialize(const std::string& contents)
+OPFSupervisionado<T> OPFSupervisionado<T>::desserializa(const std::string& conteudos)
 {
     // Header
     int n_samples;
@@ -864,53 +917,53 @@ SupervisedOPF<T> SupervisedOPF<T>::unserialize(const std::string& contents)
 
     char header[4];
 
-    SupervisedOPF<float> opf;
+    OPFSupervisionado<float> opf;
 
     // Open stream
-    std::istringstream ifs(contents); // , std::ios::in | std::ios::binary
+    std::istringstream ifs(conteudos); // , std::ios::in | std::ios::binary
 
     // Check if stream is an OPF serialization
-    read_bin<char>(ifs, header, 3);
+    lerbinario<char>(ifs, header, 3);
     header[3] = '\0';
     if (strcmp(header, "OPF"))
         throw std::invalid_argument("Input is not an OPF serialization");
 
     // Get type and flags
-    uchar type = read_bin<uchar>(ifs);
-    uchar flags = read_bin<uchar>(ifs);
-    read_bin<uchar>(ifs); // Reserved byte
+    uchar type = lerBinario<uchar>(ifs);
+    uchar flags = lerBinario<uchar>(ifs);
+    lerBinario<uchar>(ifs); // Reserved byte
 
-    if (type != Type::Classifier)
+    if (type != Tipo::Classificador)
         throw std::invalid_argument("Input is not a Supervised OPF serialization");
 
-    n_samples = read_bin<int>(ifs);
-    n_features = read_bin<int>(ifs);
+    n_samples = lerBinario<int>(ifs);
+    n_features = lerBinario<int>(ifs);
 
     // Data
     int size = n_samples * n_features;
-    opf.train_data = Mat<T>(n_samples, n_features);
-    T* data = opf.train_data.row(0);
-    read_bin<T>(ifs, data, size);
+    opf.dadoDeTreinamento = Mat<T>(n_samples, n_features);
+    T* data = opf.dadoDeTreinamento.linha(0);
+    lerbinario<T>(ifs, data, size);
 
     // Nodes
-    opf.nodes = std::vector<Node>(n_samples);
+    opf.nodos = std::vector<Nodo>(n_samples);
     for (int i = 0; i < n_samples; i++)
     {
-        opf.nodes[i].cost = read_bin<float>(ifs);
-        opf.nodes[i].label = read_bin<int>(ifs);
+        opf.nodos[i].custo = lerBinario<float>(ifs);
+        opf.nodos[i].rotulo = lerBinario<int>(ifs);
     }
 
     // Ordered_nodes
-    opf.ordered_nodes = std::vector<unsigned int>(n_samples);
-    read_bin<unsigned int>(ifs, opf.ordered_nodes.data(), n_samples);
+    opf.nodosOrdenados = std::vector<unsigned int>(n_samples);
+    lerbinario<unsigned int>(ifs, opf.nodosOrdenados.data(), n_samples);
 
-    if (flags & SFlags::Sup_SavePrototypes)
+    if (flags & SFlags::Supervisionado_SalvaPrototipos)
     {
-        int prots = read_bin<int>(ifs);
+        int prots = lerBinario<int>(ifs);
         for (int i = 0; i < prots; i++)
         {
-            int idx = read_bin<int>(ifs);
-            opf.nodes[idx].is_prototype = true;
+            int idx = lerBinario<int>(ifs);
+            opf.nodos[idx].isPrototipo = true;
         }
     }
 
@@ -922,22 +975,22 @@ SupervisedOPF<T> SupervisedOPF<T>::unserialize(const std::string& contents)
 /*****************************************/
 
 template <class T>
-std::vector<std::vector<float>> SupervisedOPF<T>::get_prototypes()
+std::vector<std::vector<float>> OPFSupervisionado<T>::getPrototipos()
 {
     std::set<int> prots;
-    for (size_t i = 0; i < this->train_data.rows; i++)
+    for (size_t i = 0; i < this->dadoDeTreinamento.linhas; i++)
     {
-        if (this->nodes[i].is_prototype)
+        if (this->nodos[i].isPrototipo)
             prots.insert(i);
     }
 
-    std::vector<std::vector<float>> out(prots.size(), std::vector<float>(this->train_data.cols));
+    std::vector<std::vector<float>> out(prots.size(), std::vector<float>(this->dadoDeTreinamento.colunas));
     int i = 0;
     for (auto it = prots.begin(); it != prots.end(); ++it, ++i)
     {
-        for (int j = 0; j < this->train_data.cols; j++)
+        for (int j = 0; j < this->dadoDeTreinamento.colunas; j++)
         {
-            out[i][j] = this->train_data[*it][j];
+            out[i][j] = this->dadoDeTreinamento[*it][j];
         }
     }
 
@@ -948,7 +1001,7 @@ std::vector<std::vector<float>> SupervisedOPF<T>::get_prototypes()
 
 /******** Unsupervised ********/
 
-// Index + distance to another node
+// Index + distancia to another node
 using Pdist = std::pair<int, float>;
 
 static bool compare_neighbor(const Pdist& lhs, const Pdist& rhs)
@@ -1004,9 +1057,9 @@ public:
         this->pred = -1;
     }
 
-    std::set<Pdist> adj; // Node adjacency
+    std::set<Pdist> adj; // Nodo adjacency
     size_t index;        // Index on the list -- makes searches easier
-    int label;           // Assigned label
+    int label;           // Assigned rotulo
     int pred;            // Predecessor node
     float value;         // Path value
     float rho;           // probability density function
@@ -1018,12 +1071,12 @@ class UnsupervisedOPF
 {
 private:
     // Model
-    std::shared_ptr<const Mat<T>> train_data;   // Training data (original vectors or distance matrix)
+    std::shared_ptr<const Mat<T>> train_data;   // Training dado (original vectors or distancia matrix)
     funcaoDistancia<T> distance; // Distance function
     std::vector<NodeKNN> nodes;    // Learned model
     std::vector<int> queue;        // Priority queue implemented as a linear search in a vector
     int k;                         // The number of neighbors to build the graph
-    int n_clusters;                // Number of clusters in the model -- computed during fit
+    int n_clusters;                // Number of clusters in the model -- computed during ajusta
 
     // Training attributes
     float sigma_sq;             // Sigma squared, used to compute probability distribution function
@@ -1052,7 +1105,7 @@ public:
 
     void find_best_k(Mat<float>& train_data, int kmin, int kmax, int step=1, bool precompute=true);
 
-    // Clustering info
+    // Agrupamento info
     float quality_metric();
 
     // Getters & Setters
@@ -1097,9 +1150,9 @@ void UnsupervisedOPF<T>::build_graph()
             {
                 float dist;
                 if (this->precomputed)
-                    dist = this->train_data->at(i, j);
+                    dist = this->train_data->em(i, j);
                 else
-                    dist = this->distance(this->train_data->row(i), this->train_data->row(j), this->train_data->cols);
+                    dist = this->distance(this->train_data->linha(i), this->train_data->linha(j), this->train_data->colunas);
 
                 bk.insert(j, dist);
             }
@@ -1108,7 +1161,7 @@ void UnsupervisedOPF<T>::build_graph()
         std::vector<Pdist> knn = bk.get_knn();
         for (auto it = knn.cbegin(); it != knn.cend(); ++it)
         {
-            // Since the graph is undirected, make connections from both nodes
+            // Since the graph is undirected, make connections from both nodos
             this->nodes[i].adj.insert(*it);
             this->nodes[it->first].adj.insert(Pdist(i, it->second));
 
@@ -1123,7 +1176,7 @@ void UnsupervisedOPF<T>::build_graph()
     this->denominator = sqrt(2 * M_PI * this->sigma_sq);
 }
 
-// Initialize the graph nodes
+// Initialize the graph nodos
 template <class T>
 void UnsupervisedOPF<T>::build_initialize()
 {
@@ -1217,7 +1270,7 @@ void UnsupervisedOPF<T>::cluster()
             if (this->nodes[t].value < this->nodes[s].value)
             {
                 float rho = std::min(this->nodes[s].value, this->nodes[t].rho);
-                // std::cout << rho << " " << this->nodes[t].value << std::endl;
+                // std::cout << rho << " " << this->nodos[t].value << std::endl;
                 if (rho > this->nodes[t].value)
                 {
                     this->nodes[t].label = this->nodes[s].label;
@@ -1237,14 +1290,14 @@ template <class T>
 void UnsupervisedOPF<T>::fit(const Mat<T> &train_data)
 {
     this->train_data = std::shared_ptr<const Mat<T>>(&train_data, [](const Mat<T> *p) {});
-    this->nodes = std::vector<NodeKNN>(this->train_data->rows);
+    this->nodes = std::vector<NodeKNN>(this->train_data->linhas);
     this->build_graph();
     this->build_initialize();
     if (!this->anomaly)
         this->cluster();
 }
 
-// Fit and predict for all nodes
+// Fit and prediz for all nodos
 template <class T>
 std::vector<int> UnsupervisedOPF<T>::fit_predict(const Mat<T> &train_data)
 {
@@ -1266,9 +1319,9 @@ std::vector<int> UnsupervisedOPF<T>::fit_predict(const Mat<T> &train_data)
 template <class T>
 std::vector<int> UnsupervisedOPF<T>::predict(const Mat<T> &test_data)
 {
-    std::vector<int> preds(test_data.rows);
+    std::vector<int> preds(test_data.linhas);
     // For each test sample
-    for (size_t i = 0; i < test_data.rows; i++)
+    for (size_t i = 0; i < test_data.linhas; i++)
     {
         // Find the k nearest neighbors
         BestK bk(this->k);
@@ -1278,9 +1331,9 @@ std::vector<int> UnsupervisedOPF<T>::predict(const Mat<T> &test_data)
             {
                 float dist;
                 if (this->precomputed)
-                    dist = test_data.at(i, j);
+                    dist = test_data.em(i, j);
                 else
-                    dist = this->distance(test_data[i], this->train_data->row(j), this->train_data->cols);
+                    dist = this->distance(test_data[i], this->train_data->linha(j), this->train_data->colunas);
 
                 bk.insert(j, dist);
             }
@@ -1314,7 +1367,7 @@ std::vector<int> UnsupervisedOPF<T>::predict(const Mat<T> &test_data)
 
             for (int j = 0; j < n_neighbors; j++)
             {
-                int s = neighbors[j].first;  // idx, distance
+                int s = neighbors[j].first;  // idx, distancia
                 float val = std::min(this->nodes[s].value, rho);
                 if (val > maxval)
                 {
@@ -1340,7 +1393,7 @@ float UnsupervisedOPF<T>::quality_metric()
         throw std::invalid_argument("Quality metric not implemented for anomaly detection yet");
     std::vector<float> w(this->n_clusters, 0);
     std::vector<float> w_(this->n_clusters, 0);
-    for (size_t i = 0; i < this->train_data->rows; i++)
+    for (size_t i = 0; i < this->train_data->linhas; i++)
     {
         int l = this->nodes[i].label;
 
@@ -1427,48 +1480,48 @@ template <class T>
 std::string UnsupervisedOPF<T>::serialize(uchar flags)
 {
     if (this->precomputed)
-        throw std::invalid_argument("Serialization for precomputed OPF not implemented yet");
+        throw std::invalid_argument("Serialization for isPrecomputado OPF not implemented yet");
 
     // Open file
     std::ostringstream output   ;
-    int n_samples = this->train_data->rows;
-    int n_features = this->train_data->cols;
+    int n_samples = this->train_data->linhas;
+    int n_features = this->train_data->colunas;
 
     // Output flags
     flags = 0; // For now, there are no user-defined flags
     if (this->anomaly)
-        flags += SFlags::Unsup_Anomaly;
+        flags += SFlags::NaoSupervisionado_Anomalia;
 
     // Header
-    write_bin<char>(output, "OPF", 3);
-    write_bin<uchar>(output, Type::Clustering);
-    write_bin<uchar>(output, flags);
-    write_bin<uchar>(output, static_cast<uchar>(0)); // Reserved byte
-    write_bin<int>(output, n_samples);
-    write_bin<int>(output, n_features);
+    escreveBinario<char>(output, "OPF", 3);
+    escreveBinario<uchar>(output, Tipo::Agrupamento);
+    escreveBinario<uchar>(output, flags);
+    escreveBinario<uchar>(output, static_cast<uchar>(0)); // Reserved byte
+    escreveBinario<int>(output, n_samples);
+    escreveBinario<int>(output, n_features);
 
-    // Scalar data
-    write_bin<int>(output, this->k);
+    // Scalar dado
+    escreveBinario<int>(output, this->k);
     if (!this->anomaly)
-        write_bin<int>(output, this->n_clusters);
+        escreveBinario<int>(output, this->n_clusters);
     else
-        write_bin<float>(output, this->thresh);
-    write_bin<float>(output, this->denominator);
-    write_bin<float>(output, this->sigma_sq);
+        escreveBinario<float>(output, this->thresh);
+    escreveBinario<float>(output, this->denominator);
+    escreveBinario<float>(output, this->sigma_sq);
 
     // Data
     for (int i = 0; i < n_samples; i++)
     {
-        const T* data = this->train_data->row(i);
-        write_bin<T>(output, data, n_features);
+        const T* data = this->train_data->linha(i);
+        escreveBinario<T>(output, data, n_features);
     }
 
     // Nodes
     for (int i = 0; i < n_samples; i++)
     {
-        write_bin<float>(output, this->nodes[i].value);
+        escreveBinario<float>(output, this->nodes[i].value);
         if (!this->anomaly)
-            write_bin<int>(output, this->nodes[i].label);
+            escreveBinario<int>(output, this->nodes[i].label);
     }
 
     return output.str();
@@ -1488,45 +1541,45 @@ UnsupervisedOPF<T> UnsupervisedOPF<T>::unserialize(const std::string& contents)
     char header[4];
 
     // Check if stream is an OPF serialization
-    read_bin<char>(ifs, header, 3);
+    lerbinario<char>(ifs, header, 3);
     header[3] = '\0';
     if (strcmp(header, "OPF"))
         throw std::invalid_argument("Input is not an OPF serialization");
 
     // Get type and flags
-    uchar type = read_bin<uchar>(ifs);
-    uchar flags = read_bin<uchar>(ifs); // Flags byte
-    read_bin<uchar>(ifs); // reserved byte
+    uchar type = lerBinario<uchar>(ifs);
+    uchar flags = lerBinario<uchar>(ifs); // Flags byte
+    lerBinario<uchar>(ifs); // reserved byte
 
-    if (flags & SFlags::Unsup_Anomaly)
+    if (flags & SFlags::NaoSupervisionado_Anomalia)
         opf.anomaly = true;
 
-    if (type != Type::Clustering)
+    if (type != Tipo::Agrupamento)
         throw std::invalid_argument("Input is not an Unsupervised OPF serialization");
 
-    // Data size
-    n_samples = read_bin<int>(ifs);
-    n_features = read_bin<int>(ifs);
+    // Data tamanho
+    n_samples = lerBinario<int>(ifs);
+    n_features = lerBinario<int>(ifs);
 
-    // Scalar data
-    opf.k = read_bin<int>(ifs);
+    // Scalar dado
+    opf.k = lerBinario<int>(ifs);
     if (!opf.anomaly)
-        opf.n_clusters = read_bin<int>(ifs);
+        opf.n_clusters = lerBinario<int>(ifs);
     else
     {
-        opf.thresh = read_bin<float>(ifs);
+        opf.thresh = lerBinario<float>(ifs);
         opf.n_clusters = 2;
     }
-    opf.denominator = read_bin<float>(ifs);
-    opf.sigma_sq = read_bin<float>(ifs);
+    opf.denominator = lerBinario<float>(ifs);
+    opf.sigma_sq = lerBinario<float>(ifs);
 
     /// Data
-    // Temporary var to read data, since opf's train_data is const
+    // Temporary var to read dado, since opf's dadoDeTreinamento is const
     auto train_data = std::shared_ptr<Mat<T>>(new Mat<T>(n_samples, n_features), std::default_delete<Mat<T>>());
-    // Read data
+    // Read dado
     int size = n_samples * n_features;
-    T* data = train_data->row(0);
-    read_bin<T>(ifs, data, size);
+    T* data = train_data->linha(0);
+    lerbinario<T>(ifs, data, size);
     // Assign to opf
     opf.train_data = train_data;
 
@@ -1534,9 +1587,9 @@ UnsupervisedOPF<T> UnsupervisedOPF<T>::unserialize(const std::string& contents)
     opf.nodes = std::vector<NodeKNN>(n_samples);
     for (int i = 0; i < n_samples; i++)
     {
-        opf.nodes[i].value = read_bin<float>(ifs);
+        opf.nodes[i].value = lerBinario<float>(ifs);
         if (!opf.anomaly)
-            opf.nodes[i].label = read_bin<int>(ifs);
+            opf.nodes[i].label = lerBinario<int>(ifs);
     }
 
     return std::move(opf);
