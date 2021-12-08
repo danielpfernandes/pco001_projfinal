@@ -31,8 +31,8 @@
 #include <cstdio>
 #include <cassert>
 
-#include <libopfcpp/OPF.hpp>
-#include <libopfcpp/util.hpp>
+#include "../include/libopfcpp/OPF.hpp"
+#include "../include/libopfcpp/util.hpp"
 
 using namespace std;
 using namespace opf;
@@ -117,16 +117,16 @@ int main(int argc, char *argv[])
      * Classification
      ****************************/
 
-    UnsupervisedOPF<float> opf(k, true, thresh, false);
+    OPFNaoSupervisionado<float> opf(k, true, thresh, false);
     // Find best k
-    opf.fit(train_data);
+    opf.ajusta(train_data);
     cout << "k: " << opf.get_k() << endl;
 
     TIMING_SECTION("Fit", outchannel, &measurement);
 
     // Predict
-    vector<int> train_preds = opf.predict(train_data);
-    vector<int> test_preds = opf.predict(test_data);
+    vector<int> train_preds = opf.prediz(train_data);
+    vector<int> test_preds = opf.prediz(test_data);
     TIMING_SECTION("Predict", outchannel, &measurement);
 
     // Save predictions for plotting
@@ -188,13 +188,13 @@ int main(int argc, char *argv[])
     ifs.close();
 
     // Unserialize contents into an OPF object
-    opf::UnsupervisedOPF<float> opf2 = opf::UnsupervisedOPF<float>::unserialize(contents);
-    cout << "Loaded model: k=" << opf2.get_k() << ", " << opf.get_n_clusters() << " clusters, thresh=" << opf.get_thresh() << endl;
+    opf::OPFNaoSupervisionado<float> opf2 = opf::OPFNaoSupervisionado<float>::desserializa(contents);
+    cout << "Loaded model: k=" << opf2.get_k() << ", " << opf.get_n_clusters() << " clusters, thresh=" << opf.getLimiar() << endl;
 
     TIMING_SECTION("Loading saved model", outchannel, &measurement);
 
     ////////////////////////////////////////////////////////
-    vector<int> persist_preds = opf2.predict(test_data);
+    vector<int> persist_preds = opf2.prediz(test_data);
 
     // Build and populate mat
     Mat<int> correspondence2(unique_labels.size(), opf2.get_n_clusters(), 0);

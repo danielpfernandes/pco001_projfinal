@@ -55,7 +55,7 @@ int main()
     cout << "########################################" << endl;
     cout << "Supervised OPF" << endl;
     /////////////////////////////////////////////
-    // Fit and predict
+    // Fit and prediz
     opf::OPFSupervisionado<float> opf;
     opf.ajusta(train_data, train_labels);
     vector<int> preds = opf.prediz(test_data);

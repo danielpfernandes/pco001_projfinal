@@ -117,15 +117,15 @@ int main(int argc, char *argv[])
      * Classification
      ****************************/
 
-    UnsupervisedOPF<float> opf;
+    OPFNaoSupervisionado<float> opf;
     // Find best k
-    opf.find_best_k(train_data, kmin, kmax, step);
+    opf.buscaMelhorK(train_data, kmin, kmax, step);
     cout << "k: " << opf.get_k() << endl;
 
     TIMING_SECTION("Fit", outchannel, &measurement);
 
     // Predict
-    vector<int> assigned_labels = opf.predict(train_data);
+    vector<int> assigned_labels = opf.prediz(train_data);
     TIMING_SECTION("Predict", outchannel, &measurement);
 
 
@@ -163,8 +163,8 @@ int main(int argc, char *argv[])
     cout << "\n\nFind anomaly points" << endl;
     cout << "-----------------------" << endl;
 
-    UnsupervisedOPF<float> anomaly(opf.get_k(), true, .001, false);
-    vector<int> anomaly_preds = anomaly.fit_predict(train_data);
+    OPFNaoSupervisionado<float> anomaly(opf.get_k(), true, .001, false);
+    vector<int> anomaly_preds = anomaly.ajustaPrevisao(train_data);
 
     correspondence = Mat<int>(unique_labels.size(), anomaly.get_n_clusters(), 0);
     for (size_t i = 0; i < train_labels.size(); i++)
@@ -192,7 +192,7 @@ int main(int argc, char *argv[])
     cout << "------------------------------" << endl;
 
     {   // Sub scope to destroy variable "contents"
-        std::string contents = opf.serialize(opf::SFlags::Supervisionado_SalvaPrototipos);
+        std::string contents = opf.serializa(opf::SFlags::Supervisionado_SalvaPrototipos);
         std::ofstream ofs ("teste.dat", std::ios::out | std::ios::binary);
         if (!ofs)
         {
@@ -216,7 +216,7 @@ int main(int argc, char *argv[])
     ifs.close();
 
     // Unserialize contents into an OPF object
-    opf::UnsupervisedOPF<float> opf2 = opf::UnsupervisedOPF<float>::unserialize(contents);
+    opf::OPFNaoSupervisionado<float> opf2 = opf::OPFNaoSupervisionado<float>::desserializa(contents);
     cout << "Loaded model: k=" << opf2.get_k() << ", " << opf.get_n_clusters() << " clusters" << endl;
 
     TIMING_SECTION("Loading saved model", outchannel, &measurement);
@@ -224,7 +224,7 @@ int main(int argc, char *argv[])
 
 
     ////////////////////////////////////////////////////////
-    vector<int> persist_preds = opf2.predict(train_data);
+    vector<int> persist_preds = opf2.prediz(train_data);
 
     // Build and populate mat
     Mat<int> correspondence2(unique_labels.size(), opf2.get_n_clusters(), 0);

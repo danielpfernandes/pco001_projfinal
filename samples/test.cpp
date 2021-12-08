@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
         TIMING_SECTION("OPF training", &measurement);
         times[0][i] = measurement;
         
-        // And predict test data
+        // And prediz test data
         vector<int> preds = opf.prediz(test_data);
 
         TIMING_SECTION("OPF testing", &measurement);
@@ -136,7 +136,7 @@ int main(int argc, char *argv[])
         TIMING_SECTION("OPF precomputed training", &measurement);
         times[3][i] = measurement;
         
-        // And predict test data
+        // And prediz test data
         preds = opf_precomp.prediz(precomp_test_data);
 
         TIMING_SECTION("OPF precomputed testing", &measurement);
