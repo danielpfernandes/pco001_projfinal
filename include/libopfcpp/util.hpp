@@ -1,11 +1,15 @@
 /******************************************************
- * Utilities for OPF.hpp                              *
+ * Utilitários para OPF.hpp                           *
  *                                                    *
- * Author: Thierry Moreira                            *
+ * Projeto original: Thierry Moreira, 2019            *
+ *                                                    *
+ * Adaptado por: Daniel P Fernandes, Natalia S        *
+ * Sanchez & Alexandre L Sousa                        *
  *                                                    *
  ******************************************************/
 
-// Copyright 2019 Thierry Moreira
+// Copyright 2021 Daniel P Fernandes, Natalia S Sanchez & Alexandre
+// L Sousa
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,185 +47,238 @@
 namespace opf
 {
 
-
+/**
+ * Imprime um dado vetor
+ * @tparam T template
+ * @param v vetor
+ * @param tamanho tamanho do vetor
+ */
 template <class T>
-void print_vector(T* v, int size)
+void imprimeVetor(T* v, int tamanho)
 {
     std::cout << "[";
-    for (int i = 0; i < size; i++)
+    for (int i = 0; i < tamanho; i++)
         std::cout << v[i] << ' ';
     std::cout << "]";
 }
 
+/**
+ * Imprime uma dada matriz
+ * @tparam T template
+ * @param m matriz
+ */
 template <class T>
-void print_matrix(Mat<T> m)
+void imprimeMatriz(Mat<T> m)
 {
-    for (int i = 0; i < m.rows; i++)
+    for (int i = 0; i < m.linhas; i++)
     {
-        T* row = m.row(i);
-        print_vector(row, m.cols);
+        T* row = m.linha(i);
+        imprimeVetor(row, m.colunas);
         std::cout << '\n';
     }
     std::cout << std::endl;
 }
 
+/**
+ *
+ * @tparam T template
+ * @param dadosDeTeste matriz n-dimensional com dados de teste
+ * @param dadosDeTreinamento matriz n-dimensional com dados de treinamento
+ * @param distancia resultado da função de distância (padrão: distância euclidiana)
+ * @return matriz n-dimensional
+ */
 template <class T>
-Mat<float> compute_test_distances(const Mat<T>& test_data, const Mat<T>& train_data, distance_function<T> distance=euclidean_distance<T>)
+Mat<float> computaDistanciasDeTestes(const Mat<T>& dadosDeTeste, const Mat<T>& dadosDeTreinamento, funcaoDistancia<T> distancia=
+distanciaEuclidiana < T >)
 {
-    Mat<float> distances(test_data.rows, train_data.rows);
-    int vec_size = train_data.cols;
+    Mat<float> distances(dadosDeTeste.linhas, dadosDeTreinamento.linhas);
+    int vec_size = dadosDeTreinamento.colunas;
 
-    #pragma omp parallel for shared(train_data, test_data, distances)
-    for (int i = 0; i < distances.rows; i++)
+    #pragma omp parallel for shared(dadosDeTreinamento, dadosDeTeste, distances)
+    for (int i = 0; i < distances.linhas; i++)
     {
-        for (int j = 0; j < distances.cols; j++)
+        for (int j = 0; j < distances.colunas; j++)
         {
-            distances[i][j] = distance(test_data[i], train_data[j], vec_size);
+            distances[i][j] = distancia(dadosDeTeste[i], dadosDeTreinamento[j], vec_size);
         }
     }
 
     return distances;
 }
 
+/**
+ * Lê os dados de arquivo contendo um dataset com matriz n-dimensional
+ * @tparam T template
+ * @param nomeDoArquivo nome do arquivo
+ * @param dado matriz n-dimensional com os dados
+ * @return true se a leitura foi bem-sucedida
+ */
 template <class T>
-bool read_mat(const std::string& filename, Mat<T>& data)
+bool lerMatriz(const std::string& nomeDoArquivo, Mat<T>& dado)
 {
-    std::ifstream file (filename, std::ios::in | std::ios::binary);
+    std::ifstream arquivo (nomeDoArquivo, std::ios::in | std::ios::binary);
 
-    if (!file.is_open())
+    if (!arquivo.is_open())
     {
-        std::cerr << "[util/read_mat] Could not open file: " << filename << std::endl;
+        std::cerr << "[util/lerMatriz] Não foi possível abrir o arquivo: " << nomeDoArquivo << std::endl;
         return false;
     }
 
-    int rows, cols;
-    file.read((char*)&rows, sizeof(int));
-    file.read((char*)&cols, sizeof(int));
+    int linhas, colunas;
+    arquivo.read((char*)&linhas, sizeof(int));
+    arquivo.read((char*)&colunas, sizeof(int));
 
-    data = Mat<T>(rows, cols);
+    dado = Mat<T>(linhas, colunas);
 
     T val;
-    for (int i = 0; i < rows; i++)
+    for (int i = 0; i < linhas; i++)
     {
-        for (int j = 0; j < cols; j++)
+        for (int j = 0; j < colunas; j++)
         {
-            file.read((char*)&val, sizeof(T));
-            data[i][j] = val;
+            arquivo.read((char*)&val, sizeof(T));
+            dado[i][j] = val;
         }
     }
-    file.close();
+    arquivo.close();
 
     return true;
 }
 
+/**
+ * Lê o rotulo das matrizes
+ * @tparam T template
+ * @param nomeDoArquivo Nome do arquivo
+ * @param dado Dado da matriz
+ * @param rotulos Rótulos do conjunto de dados
+ * @return true e os rótulos foram lidos com sucesso
+ */
 template <class T>
-bool read_mat_labels(const std::string& filename, Mat<T>& data, std::vector<int>& labels)
+bool lerRotuloDasMatrizes(const std::string& nomeDoArquivo, Mat<T>& dado, std::vector<int>& rotulos)
 {
-    std::ifstream file (filename, std::ios::in | std::ios::binary);
+    std::ifstream arquivo (nomeDoArquivo, std::ios::in | std::ios::binary);
 
-    if (!file.is_open())
+    if (!arquivo.is_open())
     {
-        std::cerr << "[util/read_mat_labels] Could not open file: " << filename << std::endl;
+        std::cerr << "[util/lerRotuloDasMatrizes] Could not open arquivo: " << nomeDoArquivo << std::endl;
         return false;
     }
 
-    int rows, cols;
-    file.read((char*)&rows, sizeof(int));
-    file.read((char*)&cols, sizeof(int));
+    int linhas, colunas;
+    arquivo.read((char*)&linhas, sizeof(int));
+    arquivo.read((char*)&colunas, sizeof(int));
 
-    data = Mat<T>(rows, cols);
-    labels = std::vector<int>(rows);
+    dado = Mat<T>(linhas, colunas);
+    rotulos = std::vector<int>(linhas);
 
-    int label;
+    int rotulo;
     T val;
-    for (int i = 0; i < rows; i++)
+    for (int i = 0; i < linhas; i++)
     {
-        // label
-        file.read((char*)&label, sizeof(int));
-        labels[i] = label;
+        // rotulo
+        arquivo.read((char*)&rotulo, sizeof(int));
+        rotulos[i] = rotulo;
 
-        for (int j = 0; j < cols; j++)
+        for (int j = 0; j < colunas; j++)
         {
-            file.read((char*)&val, sizeof(T));
-            data[i][j] = val;
+            arquivo.read((char*)&val, sizeof(T));
+            dado[i][j] = val;
         }
     }
-    file.close();
+    arquivo.close();
 
     return true;
 }
 
-
+/**
+ * Escreve arquivo de dataset
+ * @tparam T
+ * @param nomeDoArquivo nome do arquivo
+ * @param dado matriz n-dimensional com os dados
+ * @return true se o arquivo foi escrito com sucesso
+ */
 template <class T>
-bool write_mat(const std::string& filename, const Mat<T>& data)
+bool escreveMatriz(const std::string& nomeDoArquivo, const Mat<T>& dado)
 {
-    int rows = static_cast<int>(data.rows);
-    int cols = static_cast<int>(data.cols);
-    if (rows == 0 || cols == 0)
+    int linhas = static_cast<int>(dado.linhas);
+    int colunas = static_cast<int>(dado.colunas);
+    if (linhas == 0 || colunas == 0)
     {
-        std::cerr << "[util/write_mat] Invalid data size:" << rows << ", " << cols << std::endl;
+        std::cerr << "[util/escreveMatriz] Tamanho de dado inválido:" << linhas << ", " << colunas << std::endl;
         return false;
     }
 
-    std::ofstream file (filename, std::ios::out | std::ios::binary);
+    std::ofstream arquivo (nomeDoArquivo, std::ios::out | std::ios::binary);
 
-    if (!file.is_open())
+    if (!arquivo.is_open())
     {
-        std::cerr << "[util/write_mat] Could not open file: " << filename << std::endl;
+        std::cerr << "[util/escreveMatriz] Não foi possível abrir o arquivo: " << nomeDoArquivo << std::endl;
         return false;
     }
 
-    file.write((char*)&rows, sizeof(int));
-    file.write((char*)&cols, sizeof(int));
+    arquivo.write((char*)&linhas, sizeof(int));
+    arquivo.write((char*)&colunas, sizeof(int));
 
-    for (int i = 0; i < rows; i++)
-        for (int j = 0; j < cols; j++)
-            file.write((char*)&data[i][j], sizeof(T));
+    for (int i = 0; i < linhas; i++)
+        for (int j = 0; j < colunas; j++)
+            arquivo.write((char*)&dado[i][j], sizeof(T));
     
-    file.close();
+    arquivo.close();
     
     return true;
 }
 
+/**
+ * Escreve arquivo com rótulo dos dados do dataset
+ * @tparam T
+ * @param nomeDoArquivo nome do arquivo
+ * @param dado conjunto de dados em matriz n-dimensional
+ * @param rotulos vetor com rótulo dos dados
+ * @return true se o arquivo foi escrito com sucesso
+ */
 template <class T>
-bool write_mat_labels(const std::string& filename, const Mat<T>& data, const std::vector<int>& labels)
+bool escreveRotuloDaMatriz(const std::string& nomeDoArquivo, const Mat<T>& dado, const std::vector<int>& rotulos)
 {
-    int rows = static_cast<int>(data.rows);
-    int cols = static_cast<int>(data.cols);
+    int rows = static_cast<int>(dado.linhas);
+    int cols = static_cast<int>(dado.colunas);
     if (rows == 0 || cols == 0)
     {
-        std::cerr << "[util/write_mat_labels] Invalid data size:" << rows << ", " << cols << std::endl;
+        std::cerr << "[util/escreveRotuloDaMatriz] Invalid dado tamanho:" << rows << ", " << cols << std::endl;
         return false;
     }
 
-    std::ofstream file (filename, std::ios::out | std::ios::binary);
-    if (!file.is_open())
+    std::ofstream arquivo (nomeDoArquivo, std::ios::out | std::ios::binary);
+    if (!arquivo.is_open())
     {
-        std::cerr << "[util/write_mat_labels] Could not open file: " << filename << std::endl;
+        std::cerr << "[util/escreveRotuloDaMatriz] Could not open arquivo: " << nomeDoArquivo << std::endl;
         return false;
     }
 
-    // Write header
-    file.write((char*)&rows, sizeof(int));
-    file.write((char*)&cols, sizeof(int));
+    // Escreve cabeçalho
+    arquivo.write((char*)&rows, sizeof(int));
+    arquivo.write((char*)&cols, sizeof(int));
 
-    // Write data
+    // Escreve dado
     for (int i = 0; i < rows; i++)
     {
-        // label
-        file.write((char*)&labels[i], sizeof(int));
+        // rótulo
+        arquivo.write((char*)&rotulos[i], sizeof(int));
         
         for (int j = 0; j < cols; j++)
         {
-            file.write((char*)&data[i][j], sizeof(T));
+            arquivo.write((char*)&dado[i][j], sizeof(T));
             
         }
     }
-    file.close();
+    arquivo.close();
     
     return true;
 }
 
+/**
+ * Fornece índices de treino/teste para dividir dados em conjuntos de treinos/testes. Este objeto de validação cruzada
+ * é uma mesclagem de StratifiedKFold e ShuffleSplit, que retorna dobras aleatórias estratificadas.
+ * As dobras são feitas preservando a porcentagem de amostras para cada classe.
+ */
 class StratifiedShuffleSplit
 {
 private:
@@ -229,160 +286,127 @@ private:
     std::default_random_engine random_engine;
     
 public:
-    StratifiedShuffleSplit(float train_ratio = 0.5) : train_ratio(train_ratio)
+    StratifiedShuffleSplit(float razaoDeTreinamento = 0.5) : train_ratio(razaoDeTreinamento)
     {
         unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
         this->random_engine = std::default_random_engine(seed);
     }
-    std::pair<std::vector<int>, std::vector<int>> split(const std::vector<int> &labels);
+    std::pair<std::vector<int>, std::vector<int>> split(const std::vector<int> &rotulos);
 };
 
-// train indices, test indices
-std::pair<std::vector<int>, std::vector<int>> StratifiedShuffleSplit::split(const std::vector<int>& labels)
+// índices de treino, índices de testes
+std::pair<std::vector<int>, std::vector<int>> StratifiedShuffleSplit::split(const std::vector<int>& rotulos)
 {
-    std::map<int, int> totals, target, current;
+    std::map<int, int> totais, destino, atual;
     std::map<int, int>::iterator it;
-    std::pair<std::vector<int>, std::vector<int>> splits;
+    std::pair<std::vector<int>, std::vector<int>> divisoes;
 
-    int test_sz, train_sz = 0;
+    int tamanhoTeste, tamanhoTreino = 0;
 
-    for (int l : labels)
-        totals[l]++;
+    for (int r : rotulos)
+        totais[r]++;
 
-    // Find the number of samples for each class
-    for (it = totals.begin(); it != totals.end(); ++it)
+    // Encontra o número de amostras para cada classe
+    for (it = totais.begin(); it != totais.end(); ++it)
     {
-        target[it->first] = (int) round((float)it->second * this->train_ratio);
-        train_sz += target[it->first];
+        destino[it->first] = (int) round((float)it->second * this->train_ratio);
+        tamanhoTreino += destino[it->first];
     }
-    test_sz = labels.size() - train_sz;
+    tamanhoTeste = rotulos.size() - tamanhoTreino;
 
-    // Initialize output
-    splits.first.resize(train_sz);
-    splits.second.resize(test_sz);
+    // Inicializa a saída
+    divisoes.first.resize(tamanhoTreino);
+    divisoes.second.resize(tamanhoTeste);
 
-    // Shuffle indices
-    std::vector<int> idx(labels.size());
-    for (unsigned int i = 0; i < labels.size(); i++)
+    // Embaralha os índices
+    std::vector<int> idx(rotulos.size());
+    for (unsigned int i = 0; i < rotulos.size(); i++)
         idx[i] = i;
     
     std::shuffle(idx.begin(), idx.end(), this->random_engine);
 
-    // Assign folds
+    // Atribui dobras
     int j, l;
-    int train_idx = 0, test_idx = 0;
-    for (unsigned int i = 0; i < labels.size(); i++)
+    int indiceDeTreino = 0, indiceDeTeste = 0;
+    for (unsigned int i = 0; i < rotulos.size(); i++)
     {
         j = idx[i];
-        l = labels[j];
+        l = rotulos[j];
 
-        if (current[l] < target[labels[j]])
+        if (atual[l] < destino[rotulos[j]])
         {
-            splits.first[train_idx++] = j;
-            current[l]++;
+            divisoes.first[indiceDeTreino++] = j;
+            atual[l]++;
         }
         else
         {
-            splits.second[test_idx++] = j;
+            divisoes.second[indiceDeTeste++] = j;
         }
     }
 
-    return splits;
+    return divisoes;
 }
 
+/**
+ *
+ * @tparam T
+ * @param dado
+ * @param indices
+ * @param saida
+ */
 template <class T>
-void index_by_list(const std::vector<T>& data, const std::vector<int>& indices, std::vector<T>& output)
+void indicePorLista(const std::vector<T>& dado, const std::vector<int>& indices, std::vector<T>& saida)
 {
-    int size = indices.size();
-    output = std::vector<T>(size);
+    int tamanho = indices.size();
+    saida = std::vector<T>(tamanho);
 
-    for (int i = 0; i < size; i++)
+    for (int i = 0; i < tamanho; i++)
     {
-        output[i] = data[indices[i]];
+        saida[i] = dado[indices[i]];
     }
 }
 
+/**
+ *
+ * @tparam T
+ * @param dado
+ * @param indices
+ * @param saida
+ */
 template <class T>
-void index_by_list(const Mat<T>& data, const std::vector<int>& indices, Mat<T>& output)
+void indicePorLista(const Mat<T>& dado, const std::vector<int>& indices, Mat<T>& saida)
 {
     int size = (int) indices.size();
-    output = Mat<T>(size, data.cols);
+    saida = Mat<T>(size, dado.colunas);
 
     for (int i = 0; i < size; i++)
     {
-        for (int j = 0; j < data.cols; j++)
-            output[i][j] = data[indices[i]][j];
+        for (int j = 0; j < dado.colunas; j++)
+            saida[i][j] = dado[indices[i]][j];
     }
 }
 
-
-// Compute Papa's accuracy 
-// Papa, João & Falcão, Alexandre & Suzuki, C.T.N.. (2009). Supervised Pattern Classification Based on Optimum-Path Forest. International Journal of Imaging Systems and Technology. 19. 120 - 131. 10.1002/ima.20188.
-float papa_accuracy(const std::vector<int>& preds, const std::vector<int>& ground_truth)
+/**
+ * Calcula a acurácia baseado no valor de referência e nas previsões dos dados de teste
+ * @param valorDeReferencia valor de referência
+ * @param previsoes previsões dos dados de teste
+ * @return o valor da acurácia
+ */
+float acuracia(const std::vector<int>& valorDeReferencia, const std::vector<int>& previsoes)
 {
-    if (ground_truth.size() != preds.size())
+    if (valorDeReferencia.size() != previsoes.size())
     {
-        std::cerr << "[util/papa_accuracy] Error: ground truth and prediction sizes do not match. " << ground_truth.size() << " x " << preds.size() << std::endl;
-    }
-
-    int rows = ground_truth.size();
-    std::set<int> s(ground_truth.begin(), ground_truth.end());
-    int nlabels = s.size();
-
-    std::vector<int> class_occ(nlabels+1, 0);
-    for (int i = 0; i < rows; i++)
-        class_occ[ground_truth[i]]++;
-
-    Mat<float> errors(nlabels+1, 2, 0);
- 
-    for (int i = 0; i < rows; i++)
-    {
-        if (ground_truth[i] != preds[i])
-        {
-            errors[preds[i]][0]++;
-            errors[ground_truth[i]][1]++;
-        }
-    }
-
-    int label_count = 0;
-
-    for (int i = 1; i <= nlabels; i++)
-    {
-        if (class_occ[i] != 0)
-        {
-            errors[i][0] /= (float) (rows - class_occ[i]);
-            errors[i][1] /= (float) class_occ[i];
-            label_count++;
-        }
-    }
-
-    float error = 0.;
-
-    for (int i = 1; i <= nlabels; i++)
-    {
-        if (class_occ[i] != 0)
-        {
-            error += errors[i][0] + errors[i][1];
-        }
-    }
-
-    return 1. - (error / (2.0 * nlabels));;
-}
-
-float accuracy(const std::vector<int>& ground_truth, const std::vector<int>& preds)
-{
-    if (ground_truth.size() != preds.size())
-    {
-        std::cerr << "[util/accuracy] Error: ground truth and prediction sizes do not match. " << ground_truth.size() << " x " << preds.size() << std::endl;
+        std::cerr << "[util/acuracia] Error: o valor de referência e os tamanhos de previsão não correspondem.. "
+                  << valorDeReferencia.size() << " x " << previsoes.size() << std::endl;
     }
     
-    float n = static_cast<float>(ground_truth.size());
-    float acc = 0;
+    auto n = static_cast<float>(valorDeReferencia.size());
+    float acuracia = 0;
     for (int i = 0; i < n; i++)
-        if (ground_truth[i] == preds[i])
-            acc++;
+        if (valorDeReferencia[i] == previsoes[i])
+            acuracia++;
 
-    return acc / n;
+    return acuracia / n;
 
 }
 

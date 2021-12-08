@@ -41,7 +41,7 @@ make pco001_test
 
 Ao executar o programa compilado, ele utilizará os datasets disponíveis em  **data/pco001**. 
 
-## Referências bibliográticas
+## Referências bibliográficas
 
 `
 João Paulo Papa, Silas Evandro Nachif Fernandes, and Alexandre Xavier Falcão. 2017. Optimum-Path Forest based on k-connectivity. Pattern Recognition Letters, 87 (February 2017), 117-126.

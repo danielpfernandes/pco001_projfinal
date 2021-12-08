@@ -1,13 +1,18 @@
 /******************************************************
- * Example usage and time testing for SupervisedOPF.  *
- * Useful for comparing time using openmp.            *
+ * Exemplo de uso do OPFSupervisionado em 3 datasets como *
+ * requisito parcial do projeto final de PCO001 da    *
+ * Universidade Federal de Itajubá - MG               *
  *                                                    *
- * Author: Thierry Moreira                            *
+ * Projeto original: Thierry Moreira, 2019            *
+ *                                                    *
+ * Adaptado por: Daniel P Fernandes, Natalia S        *
+ * Sanchez & Alexandre L Sousa                        *
  *                                                    *
  ******************************************************/
 
-// Copyright 2019 Thierry Moreira
-// 
+// Copyright 2021 Daniel P Fernandes, Natalia S Sanchez & Alexandre
+// L Sousa
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -45,10 +50,10 @@ typedef timeval timer;
     gettimeofday(&TM_start,NULL);\
     TM_now = TM_start;
 #define SECTION_START(M) gettimeofday(&TM_now,NULL);\
-    fprintf(outchannel,"================================================\nStarting to measure %s\n",M);
-#define TIMING_SECTION(M, measurement) gettimeofday(&TM_now1,NULL);\
-    *measurement=(TM_now1.tv_sec-TM_now.tv_sec)*1000.0 + (TM_now1.tv_usec-TM_now.tv_usec)*0.001;\
-    fprintf(outchannel,"%.3fms:\tSECTION %s\n",*measurement,M);\
+    fprintf(outchannel,"================================================\nIniciando a medição de %s\n",M);
+#define TIMING_SECTION(M, medida) gettimeofday(&TM_now1,NULL);\
+    *(medida)=(TM_now1.tv_sec-TM_now.tv_sec)*1000.0 + (TM_now1.tv_usec-TM_now.tv_usec)*0.001;\
+    fprintf(outchannel,"%.3fms:\tSEÇÃO %s\n",*(medida),M);\
     TM_now=TM_now1;
 #define TIMING_END() gettimeofday(&TM_now1,NULL);\
     fprintf(outchannel,"\nTotal time: %.3fs\n================================================\n",\
@@ -56,9 +61,14 @@ typedef timeval timer;
 
 
 /**
- * This example trains and tests the model in five datasets.
- * For each dataset, we compute testing accuracy and execution time for the regular usage
- * and using precomputed distance matrices.
+ *  Este exemplo treina e testa o modelo em três datasets:
+ *      - Iris Data Set (UCI Machine Learning Repository)
+ *      - Banana Dataset
+ *      - Diabetic Retinopathy Debrecen Data Set (Balint Antal, Andras Hajdu: An ensemble-based system for automatic
+ *        screening of diabetic retinopathy, Knowledge-Based Systems 60 (April 2014), 20-27.)
+ *
+ *  Para cada conjunto de dados, são calculadas a precisão de teste e o tempo de execução para o uso regular e
+ *  usando matrizes de distância pré-computadorizado.
  */
 int main(int argc, char *argv[])
 {
@@ -66,99 +76,98 @@ int main(int argc, char *argv[])
     TIMING_START();
 
     vector<vector<float>> times(5, vector<float>(datasets.size()));
-    float measurement;
+    float medida;
 
     for (unsigned int i = 0; i < datasets.size(); i++)
     {
         string dataset = datasets[i];
-        Mat<float> data;
-        vector<int> labels;
+        Mat<float> dado;
+        vector<int> rotulos;
 
-        // Read data
-        read_mat_labels(dataset, data, labels);
+        // Ler dados
+        lerRotuloDasMatrizes(dataset, dado, rotulos);
 
-        // Split
+        // Divide
         SECTION_START(dataset.c_str());
-        printf("Data size %lu x %lu\n\n", data.rows, data.cols);
+        printf("Tamanho dos dados: Instâncias (%lu) x Atributos (%lu)\n\n", dado.linhas, dado.colunas);
 
-        printf("Preparing data\n");
+        printf("Preparando dado\n");
         StratifiedShuffleSplit sss(0.5);
-        pair<vector<int>, vector<int>> splits = sss.split(labels);
+        pair<vector<int>, vector<int>> divisoes = sss.split(rotulos);
 
-        TIMING_SECTION("data split", &measurement);
+        TIMING_SECTION("Divisão dos dados", &medida);
 
-        Mat<float> train_data, test_data;
-        vector<int> train_labels, ground_truth;
+        Mat<float> dadoDeTreinamento, dadoDeTeste;
+        vector<int> rotulosDeTreinamento, valorDeReferencia;
 
-        index_by_list<float>(data, splits.first, train_data);
-        index_by_list<float>(data, splits.second, test_data);
+        indicePorLista<float>(dado, divisoes.first, dadoDeTreinamento);
+        indicePorLista<float>(dado, divisoes.second, dadoDeTeste);
 
-        index_by_list<int>(labels, splits.first, train_labels);
-        index_by_list<int>(labels, splits.second, ground_truth);
+        indicePorLista<int>(rotulos, divisoes.first, rotulosDeTreinamento);
+        indicePorLista<int>(rotulos, divisoes.second, valorDeReferencia);
 
-        TIMING_SECTION("indexing", &measurement);
+        TIMING_SECTION("indexando", &medida);
 
+        // *********** Tempo de treinamento ***********
+        printf("\nExecutando OPF...\n");
 
-        // *********** Training time ***********
-        printf("\nRunning OPF...\n");
+        // Classificador de treinamento
+        OPFSupervisionado<float> opf;
+        opf.ajusta(dadoDeTreinamento, rotulosDeTreinamento);
 
-        // Train clasifier
-        SupervisedOPF<float> opf;
-        opf.fit(train_data, train_labels);
-
-        TIMING_SECTION("OPF training", &measurement);
-        times[0][i] = measurement;
+        TIMING_SECTION("Treinamento de OPF", &medida);
+        times[0][i] = medida;
         
-        // And predict test data
-        vector<int> preds = opf.predict(test_data);
+        // E previsão dos dados de teste
+        vector<int> previsoes = opf.prediz(dadoDeTeste);
 
-        TIMING_SECTION("OPF testing", &measurement);
-        times[1][i] = measurement;
+        TIMING_SECTION("Testando OPF", &medida);
+        times[1][i] = medida;
         
-        // Measure accuracy
-        float acc = accuracy(ground_truth, preds);
-        printf("Accuracy: %.3f%%\n", acc*100);
+        // Medindo acurácia
+        float acc = acuracia(valorDeReferencia, previsoes);
+        printf("Acurácia: %.3f%%\n", acc * 100);
 
-        // *********** Precomputed training time ***********
+        // *********** Tempo de treinamento pré-computado ***********
         printf("\n");
 
-        printf("\nRunning OPF with precomputed values...\n");
+        printf("\nExecutando OPF com valores pré-computados...\n");
 
-        Mat<float> precomp_train_data = compute_train_distances<float>(train_data);
-        Mat<float> precomp_test_data = compute_test_distances<float>(test_data, train_data);
-        TIMING_SECTION("Precompute train and test data", &measurement);
-        times[2][i] = measurement;
+        Mat<float> dadosDeTreinamentoPrecomp = computaDistanciasDeTreinamento<float>(dadoDeTreinamento);
+        Mat<float> dadosDeTestePrecomp = computaDistanciasDeTestes<float>(dadoDeTeste, dadoDeTreinamento);
+        TIMING_SECTION("Pré-computa dados de treinamento e de teste", &medida);
+        times[2][i] = medida;
 
-        // Train clasifier
-        SupervisedOPF<float> opf_precomp(true);
-        opf_precomp.fit(precomp_train_data, train_labels);
+        // Classificador de treinamento
+        OPFSupervisionado<float> opf_precomp(true);
+        opf_precomp.ajusta(dadosDeTreinamentoPrecomp, rotulosDeTreinamento);
 
-        TIMING_SECTION("OPF precomputed training", &measurement);
-        times[3][i] = measurement;
+        TIMING_SECTION("OPF treinamento pré-computado", &medida);
+        times[3][i] = medida;
         
-        // And predict test data
-        preds = opf_precomp.predict(precomp_test_data);
+        // E prevê os dados de teste
+        previsoes = opf_precomp.prediz(dadosDeTestePrecomp);
 
-        TIMING_SECTION("OPF precomputed testing", &measurement);
-        times[4][i] = measurement;
+        TIMING_SECTION("OPF teste pré-computado", &medida);
+        times[4][i] = medida;
         
-        // Measure accuracy
-        acc = accuracy(ground_truth, preds);
-        printf("Accuracy: %.3f%%\n", acc*100);
+        // Mede acurácia
+        acc = acuracia(valorDeReferencia, previsoes);
+        printf("Accuracy: %.3f%%\n", acc * 100);
 
         cout << "================================================\n" << endl;
     }
 
-    FILE *f;
-    f = fopen("timing.txt", "a");
+    FILE *arquivo;
+    arquivo = fopen("timing.txt", "a");
     for (size_t i = 0; i < datasets.size(); i++)
-        fprintf(f, "%s;%.3f;%.3f;%.3f;%.3f;%.3f\n", datasets[i].c_str(), times[0][i], times[1][i], times[2][i], times[3][i], times[4][i]);
-    fclose(f);
+        fprintf(arquivo, "%s;%.3f;%.3f;%.3f;%.3f;%.3f\n", datasets[i].c_str(), times[0][i], times[1][i], times[2][i], times[3][i], times[4][i]);
+    fclose(arquivo);
 
-    f = fopen("training.txt", "a");
+    arquivo = fopen("training.txt", "a");
     for (size_t i = 0; i < datasets.size(); i++)
-        fprintf(f, "%s;%.3f\n", datasets[i].c_str(), times[0][i]);
-    fclose(f);
+        fprintf(arquivo, "%s;%.3f\n", datasets[i].c_str(), times[0][i]);
+    fclose(arquivo);
 
     TIMING_END();
 

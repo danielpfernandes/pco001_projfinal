@@ -45,10 +45,10 @@ typedef timeval timer;
     gettimeofday(&TM_start,NULL);\
     TM_now = TM_start;
 #define SECTION_START(M) gettimeofday(&TM_now,NULL);\
-    fprintf(outchannel,"================================================\nStarting to measure %s\n",M);
+    fprintf(outchannel,"================================================\nIniciando a medição de %s\n",M);
 #define TIMING_SECTION(M, measurement) gettimeofday(&TM_now1,NULL);\
     *measurement=(TM_now1.tv_sec-TM_now.tv_sec)*1000.0 + (TM_now1.tv_usec-TM_now.tv_usec)*0.001;\
-    fprintf(outchannel,"%.3fms:\tSECTION %s\n",*measurement,M);\
+    fprintf(outchannel,"%.3fms:\tSEÇÃO %s\n",*measurement,M);\
     TM_now=TM_now1;
 #define TIMING_END() gettimeofday(&TM_now1,NULL);\
     fprintf(outchannel,"\nTotal time: %.3fs\n================================================\n",\
@@ -75,11 +75,11 @@ int main(int argc, char *argv[])
         vector<int> labels;
 
         // Read data
-        read_mat_labels(dataset, data, labels);
+        lerRotuloDasMatrizes(dataset, data, labels);
 
         // Split
         SECTION_START(dataset.c_str());
-        printf("Data size %lu x %lu\n\n", data.rows, data.cols);
+        printf("Data size %lu x %lu\n\n", data.linhas, data.colunas);
 
         printf("Preparing data\n");
         StratifiedShuffleSplit sss(0.5);
@@ -90,11 +90,11 @@ int main(int argc, char *argv[])
         Mat<float> train_data, test_data;
         vector<int> train_labels, ground_truth;
 
-        index_by_list<float>(data, splits.first, train_data);
-        index_by_list<float>(data, splits.second, test_data);
+        indicePorLista<float>(data, splits.first, train_data);
+        indicePorLista<float>(data, splits.second, test_data);
 
-        index_by_list<int>(labels, splits.first, train_labels);
-        index_by_list<int>(labels, splits.second, ground_truth);
+        indicePorLista<int>(labels, splits.first, train_labels);
+        indicePorLista<int>(labels, splits.second, ground_truth);
 
         TIMING_SECTION("indexing", &measurement);
 
@@ -103,55 +103,48 @@ int main(int argc, char *argv[])
         printf("\nRunning OPF...\n");
 
         // Train clasifier
-        SupervisedOPF<float> opf;
-        opf.fit(train_data, train_labels);
+        OPFSupervisionado<float> opf;
+        opf.ajusta(train_data, train_labels);
 
         TIMING_SECTION("OPF training", &measurement);
         times[0][i] = measurement;
         
-        // And predict test data
-        vector<int> preds = opf.predict(test_data);
+        // And prediz test data
+        vector<int> preds = opf.prediz(test_data);
 
         TIMING_SECTION("OPF testing", &measurement);
         times[1][i] = measurement;
         
         // Measure accuracy
-        float acc = accuracy(ground_truth, preds);
+        float acc = acuracia(ground_truth, preds);
         printf("Accuracy: %.3f%%\n", acc*100);
-        
-        float papa_acc = papa_accuracy(ground_truth, preds);
-        printf("Papa's accuracy: %.3f%%\n", papa_acc*100);
 
         // *********** Precomputed training time ***********
         printf("\n");
 
         printf("\nRunning OPF with precomputed values...\n");
 
-        Mat<float> precomp_train_data = compute_train_distances<float>(train_data);
-        Mat<float> precomp_test_data = compute_test_distances<float>(test_data, train_data);
+        Mat<float> precomp_train_data = computaDistanciasDeTreinamento<float>(train_data);
+        Mat<float> precomp_test_data = computaDistanciasDeTestes<float>(test_data, train_data);
         TIMING_SECTION("Precompute train and test data", &measurement);
         times[2][i] = measurement;
 
         // Train clasifier
-        SupervisedOPF<float> opf_precomp(true);
-        opf_precomp.fit(precomp_train_data, train_labels);
+        OPFSupervisionado<float> opf_precomp(true);
+        opf_precomp.ajusta(precomp_train_data, train_labels);
 
         TIMING_SECTION("OPF precomputed training", &measurement);
         times[3][i] = measurement;
         
-        // And predict test data
-        preds = opf_precomp.predict(precomp_test_data);
+        // And prediz test data
+        preds = opf_precomp.prediz(precomp_test_data);
 
         TIMING_SECTION("OPF precomputed testing", &measurement);
         times[4][i] = measurement;
         
         // Measure accuracy
-        acc = accuracy(ground_truth, preds);
+        acc = acuracia(ground_truth, preds);
         printf("Accuracy: %.3f%%\n", acc*100);
-        
-        papa_acc = papa_accuracy(ground_truth, preds);
-        printf("Papa's accuracy: %.3f%%\n", papa_acc*100);
-
 
         cout << "================================================\n" << endl;
     }

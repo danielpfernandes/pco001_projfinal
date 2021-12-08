@@ -31,8 +31,8 @@
 #include <cstdio>
 #include <cassert>
 
-#include <libopfcpp/OPF.hpp>
-#include <libopfcpp/util.hpp>
+#include "../include/libopfcpp/OPF.hpp"
+#include "../include/libopfcpp/util.hpp"
 
 using namespace std;
 using namespace opf;
@@ -43,10 +43,10 @@ typedef timeval timer;
     gettimeofday(&TM_start,NULL);\
     TM_now = TM_start;
 #define SECTION_START(M, ftime) gettimeofday(&TM_now,NULL);\
-    fprintf(ftime,"================================================\nStarting to measure %s\n",M);
+    fprintf(ftime,"================================================\nIniciando a medição de %s\n",M);
 #define TIMING_SECTION(M, ftime, measurement) gettimeofday(&TM_now1,NULL);\
     *measurement=(TM_now1.tv_sec-TM_now.tv_sec)*1000.0 + (TM_now1.tv_usec-TM_now.tv_usec)*0.001;\
-    fprintf(ftime,"%.3fms:\tSECTION %s\n",*measurement,M);\
+    fprintf(ftime,"%.3fms:\tSEÇÃO %s\n",*measurement,M);\
     TM_now=TM_now1;
 #define TIMING_END(ftime) gettimeofday(&TM_now1,NULL);\
     fprintf(ftime,"\nTotal time: %.3fs\n================================================\n",\
@@ -93,14 +93,14 @@ int main(int argc, char *argv[])
     float thresh = stof(argv[3]);
 
     // Get data
-    read_mat_labels<float>(path+"/training.dat", train_data, train_labels);
-    read_mat_labels<float>(path+"/testing.dat", test_data, test_labels);
+    lerRotuloDasMatrizes<float>(path+"/training.dat", train_data, train_labels);
+    lerRotuloDasMatrizes<float>(path+"/testing.dat", test_data, test_labels);
 
     for (int i = 0; i < test_labels.size(); i++)
         test_labels[i]--;
 
-    cout << "Train size: " << train_data.rows << "x" << train_data.cols << endl;
-    cout << "Test size: " << test_data.rows << "x" << test_data.cols << endl;
+    cout << "Train size: " << train_data.linhas << "x" << train_data.colunas << endl;
+    cout << "Test size: " << test_data.linhas << "x" << test_data.colunas << endl;
 
     set<int> unique_labels;
     for (size_t i = 0; i < test_labels.size(); i++)
@@ -117,16 +117,16 @@ int main(int argc, char *argv[])
      * Classification
      ****************************/
 
-    UnsupervisedOPF<float> opf(k, true, thresh, false);
+    OPFNaoSupervisionado<float> opf(k, true, thresh, false);
     // Find best k
-    opf.fit(train_data);
+    opf.ajusta(train_data);
     cout << "k: " << opf.get_k() << endl;
 
     TIMING_SECTION("Fit", outchannel, &measurement);
 
     // Predict
-    vector<int> train_preds = opf.predict(train_data);
-    vector<int> test_preds = opf.predict(test_data);
+    vector<int> train_preds = opf.prediz(train_data);
+    vector<int> test_preds = opf.prediz(test_data);
     TIMING_SECTION("Predict", outchannel, &measurement);
 
     // Save predictions for plotting
@@ -144,9 +144,9 @@ int main(int argc, char *argv[])
         correspondence[test_labels[i]][test_preds[i]]++;
 
     // Print results
-    for (int i = 0; i < correspondence.rows; i++)
+    for (int i = 0; i < correspondence.linhas; i++)
     {
-        for (int j = 0; j < correspondence.cols; j++)
+        for (int j = 0; j < correspondence.colunas; j++)
             printf("% 4d ", correspondence[i][j]);
         cout << endl;
     }
@@ -164,14 +164,14 @@ int main(int argc, char *argv[])
     cout << "------------------------------" << endl;
 
     {   // Sub scope to destroy variable "contents"
-        std::string contents = opf.serialize(opf::SFlags::Sup_SavePrototypes);
+        std::string contents = opf.serializa(opf::SFlags::Supervisionado_SalvaPrototipos);
         std::ofstream ofs ("teste.dat", std::ios::out | std::ios::binary);
         if (!ofs)
         {
             std::cout << "Can't open file" << std::endl;
             return -1;
         }
-        opf::write_bin<char>(ofs, contents.data(), contents.size());
+        opf::escreveBinario<char>(ofs, contents.data(), contents.size());
         ofs.close();
     }
     TIMING_SECTION("Serialize and persist", outchannel, &measurement);
@@ -188,13 +188,13 @@ int main(int argc, char *argv[])
     ifs.close();
 
     // Unserialize contents into an OPF object
-    opf::UnsupervisedOPF<float> opf2 = opf::UnsupervisedOPF<float>::unserialize(contents);
-    cout << "Loaded model: k=" << opf2.get_k() << ", " << opf.get_n_clusters() << " clusters, thresh=" << opf.get_thresh() << endl;
+    opf::OPFNaoSupervisionado<float> opf2 = opf::OPFNaoSupervisionado<float>::desserializa(contents);
+    cout << "Loaded model: k=" << opf2.get_k() << ", " << opf.get_n_clusters() << " clusters, thresh=" << opf.getLimiar() << endl;
 
     TIMING_SECTION("Loading saved model", outchannel, &measurement);
 
     ////////////////////////////////////////////////////////
-    vector<int> persist_preds = opf2.predict(test_data);
+    vector<int> persist_preds = opf2.prediz(test_data);
 
     // Build and populate mat
     Mat<int> correspondence2(unique_labels.size(), opf2.get_n_clusters(), 0);
@@ -202,10 +202,10 @@ int main(int argc, char *argv[])
         correspondence2[test_labels[i]][persist_preds[i]]++;
 
     // Print results
-    cout << correspondence2.cols << endl;
-    for (int i = 0; i < correspondence2.rows; i++)
+    cout << correspondence2.colunas << endl;
+    for (int i = 0; i < correspondence2.linhas; i++)
     {
-        for (int j = 0; j < correspondence2.cols; j++)
+        for (int j = 0; j < correspondence2.colunas; j++)
             printf("% 4d ", correspondence2[i][j]);
         cout << endl;
     }
