@@ -95,7 +95,7 @@ distanciaEuclidiana < T >)
     int vec_size = dadosDeTreinamento.colunas;
 
     #pragma omp parallel for shared(dadosDeTreinamento, dadosDeTeste, distances)
-    for (int i = 0; i < distances.rows; i++)
+    for (int i = 0; i < distances.linhas; i++)
     {
         for (int j = 0; j < distances.colunas; j++)
         {

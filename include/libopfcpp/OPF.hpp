@@ -792,177 +792,175 @@ void OPFSupervisionado<T>::ajusta(const Mat<T> &dadoDeTreinamento, const std::ve
 }
 
 /**
- * Classify a set of samples using a model trained by OPFSupervisionado::ajusta.
- *
- * Inputs:
- *  - dadoDeTeste:
- *    - original feature vectors [n_test_samples, n_features]      -- if isPrecomputado == false
- *    - distancia matrix          [n_test_samples, n_train_samples] -- if isPrecomputado == true
- *
- * Returns:
- *  - predictions:
- *    - a vector<int> of tamanho [n_test_samples] with classification outputs.
+ * Classifique um conjunto de amostras usando um modelo treinado por OPFSupervisionado::ajusta.
+ * @tparam T
+ * @param dadoDeTeste
+ *          - vetores de recurso original [n_samples, n_features] -- se isPrecomputado == false
+ *          - matriz de distancia [n_samples, n_samples] -- se isPrecomputado == true
+ * @return
+ * - previsões:
+ * - vetor<int> de tamanho [n_test_samples] com saídas de classificação.
  */
 template <class T>
 std::vector<int> OPFSupervisionado<T>::prediz(const Mat<T> &dadoDeTeste)
 {
-    int n_test_samples = (int) dadoDeTeste.linhas;
-    int n_train_samples = (int) this->nodos.size();
+    int n_amostrasDeTeste = (int) dadoDeTeste.linhas;
+    int n_amostrasDeTreinamento = (int) this->nodos.size();
 
-    // Output predictions
-    std::vector<int> predictions(n_test_samples);
+    // Previsões de saída
+    std::vector<int> previsoes(n_amostrasDeTeste);
 
     #pragma omp parallel for default(shared)
-    for (int i = 0; i < n_test_samples; i++)
+    for (int i = 0; i < n_amostrasDeTeste; i++)
     {
-        int idx = this->nodosOrdenados[0];
-        int min_idx = 0;
-        T min_cost = INF;
-        T weight = 0;
+        int indice = this->nodosOrdenados[0];
+        int diceMinimo = 0;
+        T custoMinimo = INF;
+        T peso = 0;
 
-        // 'nodosOrdenados' contains sample indices ordered by custo, so if the current
-        // best connection costs less than the next node, it is useless to keep looking.
-        for (int j = 0; j < n_train_samples && min_cost > this->nodos[idx].custo; j++)
+        // 'nodosOrdenados' contém índices amostrais ordenados pelo custo, portanto,
+        // se a melhor conexão atual custa menos do que o próximo nó, é inútil continuar procurando.
+        for (int j = 0; j < n_amostrasDeTreinamento && custoMinimo > this->nodos[indice].custo; j++)
         {
-            // Get the next node in the ordered list
-            idx = this->nodosOrdenados[j];
+            // Obtém o próximo nó na lista ordenada
+            indice = this->nodosOrdenados[j];
 
-            // Compute its distancia to the query point
+            // Calcular sua distância até o ponto de consulta
             if (isPrecomputado)
-                weight = dadoDeTeste[i][idx];
+                peso = dadoDeTeste[i][indice];
             else
-                weight = distancia(dadoDeTeste[i], this->dadoDeTreinamento[idx], this->dadoDeTreinamento.colunas);
+                peso = distancia(dadoDeTeste[i], this->dadoDeTreinamento[indice], this->dadoDeTreinamento.colunas);
 
-            // The custo corresponds to the max between the distancia and the reference custo
-            float cost = std::max(weight, this->nodos[idx].custo);
+            // O custo corresponde ao máximo entre a distância e o custo de referência
+            float custo = std::max(peso, this->nodos[indice].custo);
 
-            if (cost < min_cost)
+            if (custo < custoMinimo)
             {
-                min_cost = cost;
-                min_idx = idx;
+                custoMinimo = custo;
+                diceMinimo = indice;
             }
         }
 
-        predictions[i] = this->nodos[min_idx].rotulo;
+        previsoes[i] = this->nodos[diceMinimo].rotulo;
     }
 
-    return predictions;
+    return previsoes;
 }
 
 /*****************************************/
-/*              Persistence              */
+/*              Persistência             */
 /*****************************************/
 
 template <class T>
 std::string OPFSupervisionado<T>::serializa(uchar flags)
 {
     if (this->isPrecomputado)
-        throw std::invalid_argument("Serialization for isPrecomputado OPF not implemented yet");
-    // Open file
-    std::ostringstream output(std::ios::out | std::ios::binary);
+        throw std::invalid_argument("Serialização para OPF pré-computado ainda não implementado");
+    // Abre arquivo
+    std::ostringstream saida(std::ios::out | std::ios::binary);
 
-    int n_samples = this->dadoDeTreinamento.linhas;
-    int n_features = this->dadoDeTreinamento.colunas;
+    int n_amostras = this->dadoDeTreinamento.linhas;
+    int n_caracteristicas = this->dadoDeTreinamento.colunas;
 
-    // Header
-    escreveBinario<char>(output, "OPF", 3);
-    escreveBinario<uchar>(output, Tipo::Classificador);
-    escreveBinario<uchar>(output, flags);
-    escreveBinario<uchar>(output, static_cast<uchar>(0)); // Reserved flags byte
-    escreveBinario<int>(output, n_samples);
-    escreveBinario<int>(output, n_features);
+    // Cabeçalho
+    escreveBinario<char>(saida, "OPF", 3);
+    escreveBinario<uchar>(saida, Tipo::Classificador);
+    escreveBinario<uchar>(saida, flags);
+    escreveBinario<uchar>(saida, static_cast<uchar>(0)); // Reserved flags byte
+    escreveBinario<int>(saida, n_amostras);
+    escreveBinario<int>(saida, n_caracteristicas);
 
-    // Data
-    for (int i = 0; i < n_samples; i++)
+    // Dado
+    for (int i = 0; i < n_amostras; i++)
     {
         const T* data = this->dadoDeTreinamento.linha(i);
-        escreveBinario<T>(output, data, n_features);
+        escreveBinario<T>(saida, data, n_caracteristicas);
     }
 
-    // Nodes
-    for (int i = 0; i < n_samples; i++)
+    // Nós
+    for (int i = 0; i < n_amostras; i++)
     {
-        escreveBinario<float>(output, this->nodos[i].custo);
-        escreveBinario<int>(output, this->nodos[i].rotulo);
+        escreveBinario<float>(saida, this->nodos[i].custo);
+        escreveBinario<int>(saida, this->nodos[i].rotulo);
     }
 
     // Ordered_nodes
-    escreveBinario<unsigned int>(output, this->nodosOrdenados.data(), n_samples);
+    escreveBinario<unsigned int>(saida, this->nodosOrdenados.data(), n_amostras);
 
-    // Prototypes
+    // Protótipos
     if (flags & SFlags::Supervisionado_SalvaPrototipos)
     {
-        // Find which are prototypes first, because we need the correct amount
+        // Descobre quais são protótipos primeiro, porque precisamos da quantidade correta
         std::set<int> prots;
-        for (int i = 0; i < n_samples; i++)
+        for (int i = 0; i < n_amostras; i++)
         {
             if (this->nodos[i].isPrototipo)
                 prots.insert(i);
         }
 
-        escreveBinario<int>(output, prots.size());
+        escreveBinario<int>(saida, prots.size());
         for (auto it = prots.begin(); it != prots.end(); ++it)
-            escreveBinario<int>(output, *it);
+            escreveBinario<int>(saida, *it);
     }
 
-    return output.str();
+    return saida.str();
 }
 
 template <class T>
 OPFSupervisionado<T> OPFSupervisionado<T>::desserializa(const std::string& conteudos)
 {
     // Header
-    int n_samples;
-    int n_features;
+    int n_amostras;
+    int n_caracteristicas;
 
-    char header[4];
+    char cabecalho[4];
 
     OPFSupervisionado<float> opf;
 
-    // Open stream
-    std::istringstream ifs(conteudos); // , std::ios::in | std::ios::binary
+    // Abre stream
+    std::istringstream sistemaDeArquivosDeEntrada(conteudos); // , std::ios::in | std::ios::binary
 
-    // Check if stream is an OPF serialization
-    lerbinario<char>(ifs, header, 3);
-    header[3] = '\0';
-    if (strcmp(header, "OPF"))
-        throw std::invalid_argument("Input is not an OPF serialization");
+    // Verifique se o fluxo é uma serialização do OPF
+    lerbinario<char>(sistemaDeArquivosDeEntrada, cabecalho, 3);
+    cabecalho[3] = '\0';
+    if (strcmp(cabecalho, "OPF"))
+        throw std::invalid_argument("A entrada não é uma serialização do OPF");
 
-    // Get type and flags
-    uchar type = lerBinario<uchar>(ifs);
-    uchar flags = lerBinario<uchar>(ifs);
-    lerBinario<uchar>(ifs); // Reserved byte
+    // Obtém tipo and flags
+    uchar tipo = lerBinario<uchar>(sistemaDeArquivosDeEntrada);
+    uchar flags = lerBinario<uchar>(sistemaDeArquivosDeEntrada);
+    lerBinario<uchar>(sistemaDeArquivosDeEntrada); // Byte reservado
 
-    if (type != Tipo::Classificador)
-        throw std::invalid_argument("Input is not a Supervised OPF serialization");
+    if (tipo != Tipo::Classificador)
+        throw std::invalid_argument("A entrada não é uma serialização supervisionada da OPF");
 
-    n_samples = lerBinario<int>(ifs);
-    n_features = lerBinario<int>(ifs);
+    n_amostras = lerBinario<int>(sistemaDeArquivosDeEntrada);
+    n_caracteristicas = lerBinario<int>(sistemaDeArquivosDeEntrada);
 
-    // Data
-    int size = n_samples * n_features;
-    opf.dadoDeTreinamento = Mat<T>(n_samples, n_features);
+    // Dado
+    int tamanho = n_amostras * n_caracteristicas;
+    opf.dadoDeTreinamento = Mat<T>(n_amostras, n_caracteristicas);
     T* data = opf.dadoDeTreinamento.linha(0);
-    lerbinario<T>(ifs, data, size);
+    lerbinario<T>(sistemaDeArquivosDeEntrada, data, tamanho);
 
-    // Nodes
-    opf.nodos = std::vector<Nodo>(n_samples);
-    for (int i = 0; i < n_samples; i++)
+    // Nós
+    opf.nodos = std::vector<Nodo>(n_amostras);
+    for (int i = 0; i < n_amostras; i++)
     {
-        opf.nodos[i].custo = lerBinario<float>(ifs);
-        opf.nodos[i].rotulo = lerBinario<int>(ifs);
+        opf.nodos[i].custo = lerBinario<float>(sistemaDeArquivosDeEntrada);
+        opf.nodos[i].rotulo = lerBinario<int>(sistemaDeArquivosDeEntrada);
     }
 
-    // Ordered_nodes
-    opf.nodosOrdenados = std::vector<unsigned int>(n_samples);
-    lerbinario<unsigned int>(ifs, opf.nodosOrdenados.data(), n_samples);
+    // Nós ordenados
+    opf.nodosOrdenados = std::vector<unsigned int>(n_amostras);
+    lerbinario<unsigned int>(sistemaDeArquivosDeEntrada, opf.nodosOrdenados.data(), n_amostras);
 
     if (flags & SFlags::Supervisionado_SalvaPrototipos)
     {
-        int prots = lerBinario<int>(ifs);
+        int prots = lerBinario<int>(sistemaDeArquivosDeEntrada);
         for (int i = 0; i < prots; i++)
         {
-            int idx = lerBinario<int>(ifs);
+            int idx = lerBinario<int>(sistemaDeArquivosDeEntrada);
             opf.nodos[idx].isPrototipo = true;
         }
     }
@@ -971,7 +969,7 @@ OPFSupervisionado<T> OPFSupervisionado<T>::desserializa(const std::string& conte
 }
 
 /*****************************************/
-/*              Data Access              */
+/*              Acesso de dados          */
 /*****************************************/
 
 template <class T>
@@ -1480,7 +1478,7 @@ template <class T>
 std::string UnsupervisedOPF<T>::serialize(uchar flags)
 {
     if (this->precomputed)
-        throw std::invalid_argument("Serialization for isPrecomputado OPF not implemented yet");
+        throw std::invalid_argument("Serialization for precomputed OPF not implemented yet");
 
     // Open file
     std::ostringstream output   ;

@@ -87,17 +87,17 @@ int main(int argc, char *argv[])
         frac = stof(argv[5]);
 
     // Get data
-    read_mat_labels<float>(argv[1], data, labels);
+    lerRotuloDasMatrizes<float>(argv[1], data, labels);
     
     // Train/test split
     StratifiedShuffleSplit sss(frac);
     pair<vector<int>, vector<int>> split = sss.split(labels);
 
     // Matrix indexing
-    index_by_list(data, split.first, train_data);
-    index_by_list(labels, split.first, train_labels);
+    indicePorLista(data, split.first, train_data);
+    indicePorLista(labels, split.first, train_labels);
 
-    cout << "Train size: " << train_data.rows << "x" << train_data.cols << endl;
+    cout << "Train size: " << train_data.linhas << "x" << train_data.colunas << endl;
 
     set<int> unique_labels;
     for (size_t i = 0; i < labels.size(); i++)
@@ -144,9 +144,9 @@ int main(int argc, char *argv[])
         correspondence[train_labels[i]][assigned_labels[i]]++;
 
     // Print results
-    for (int i = 0; i < correspondence.rows; i++)
+    for (int i = 0; i < correspondence.linhas; i++)
     {
-        for (int j = 0; j < correspondence.cols; j++)
+        for (int j = 0; j < correspondence.colunas; j++)
             printf("% 4d ", correspondence[i][j]);
         cout << endl;
     }
@@ -171,9 +171,9 @@ int main(int argc, char *argv[])
         correspondence[train_labels[i]][anomaly_preds[i]]++;
 
     // Print results
-    for (int i = 0; i < correspondence.rows; i++)
+    for (int i = 0; i < correspondence.linhas; i++)
     {
-        for (int j = 0; j < correspondence.cols; j++)
+        for (int j = 0; j < correspondence.colunas; j++)
             printf("% 4d ", correspondence[i][j]);
         cout << endl;
     }
@@ -192,14 +192,14 @@ int main(int argc, char *argv[])
     cout << "------------------------------" << endl;
 
     {   // Sub scope to destroy variable "contents"
-        std::string contents = opf.serialize(opf::SFlags::Sup_SavePrototypes);
+        std::string contents = opf.serialize(opf::SFlags::Supervisionado_SalvaPrototipos);
         std::ofstream ofs ("teste.dat", std::ios::out | std::ios::binary);
         if (!ofs)
         {
             std::cout << "Can't open file" << std::endl;
             return -1;
         }
-        opf::write_bin<char>(ofs, contents.data(), contents.size());
+        opf::escreveBinario<char>(ofs, contents.data(), contents.size());
         ofs.close();
     }
     TIMING_SECTION("Serialize and persist", outchannel, &measurement);
@@ -232,9 +232,9 @@ int main(int argc, char *argv[])
         correspondence2[train_labels[i]][persist_preds[i]]++;
 
     // Print results
-    for (int i = 0; i < correspondence2.rows; i++)
+    for (int i = 0; i < correspondence2.linhas; i++)
     {
-        for (int j = 0; j < correspondence2.cols; j++)
+        for (int j = 0; j < correspondence2.colunas; j++)
             printf("% 4d ", correspondence2[i][j]);
         cout << endl;
     }

@@ -93,14 +93,14 @@ int main(int argc, char *argv[])
     float thresh = stof(argv[3]);
 
     // Get data
-    read_mat_labels<float>(path+"/training.dat", train_data, train_labels);
-    read_mat_labels<float>(path+"/testing.dat", test_data, test_labels);
+    lerRotuloDasMatrizes<float>(path+"/training.dat", train_data, train_labels);
+    lerRotuloDasMatrizes<float>(path+"/testing.dat", test_data, test_labels);
 
     for (int i = 0; i < test_labels.size(); i++)
         test_labels[i]--;
 
-    cout << "Train size: " << train_data.rows << "x" << train_data.cols << endl;
-    cout << "Test size: " << test_data.rows << "x" << test_data.cols << endl;
+    cout << "Train size: " << train_data.linhas << "x" << train_data.colunas << endl;
+    cout << "Test size: " << test_data.linhas << "x" << test_data.colunas << endl;
 
     set<int> unique_labels;
     for (size_t i = 0; i < test_labels.size(); i++)
@@ -144,9 +144,9 @@ int main(int argc, char *argv[])
         correspondence[test_labels[i]][test_preds[i]]++;
 
     // Print results
-    for (int i = 0; i < correspondence.rows; i++)
+    for (int i = 0; i < correspondence.linhas; i++)
     {
-        for (int j = 0; j < correspondence.cols; j++)
+        for (int j = 0; j < correspondence.colunas; j++)
             printf("% 4d ", correspondence[i][j]);
         cout << endl;
     }
@@ -164,14 +164,14 @@ int main(int argc, char *argv[])
     cout << "------------------------------" << endl;
 
     {   // Sub scope to destroy variable "contents"
-        std::string contents = opf.serialize(opf::SFlags::Sup_SavePrototypes);
+        std::string contents = opf.serialize(opf::SFlags::Supervisionado_SalvaPrototipos);
         std::ofstream ofs ("teste.dat", std::ios::out | std::ios::binary);
         if (!ofs)
         {
             std::cout << "Can't open file" << std::endl;
             return -1;
         }
-        opf::write_bin<char>(ofs, contents.data(), contents.size());
+        opf::escreveBinario<char>(ofs, contents.data(), contents.size());
         ofs.close();
     }
     TIMING_SECTION("Serialize and persist", outchannel, &measurement);
@@ -202,10 +202,10 @@ int main(int argc, char *argv[])
         correspondence2[test_labels[i]][persist_preds[i]]++;
 
     // Print results
-    cout << correspondence2.cols << endl;
-    for (int i = 0; i < correspondence2.rows; i++)
+    cout << correspondence2.colunas << endl;
+    for (int i = 0; i < correspondence2.linhas; i++)
     {
-        for (int j = 0; j < correspondence2.cols; j++)
+        for (int j = 0; j < correspondence2.colunas; j++)
             printf("% 4d ", correspondence2[i][j]);
         cout << endl;
     }

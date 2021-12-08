@@ -39,30 +39,30 @@ int main()
 
     // Read the data however you prefer
     // There are a few helper functions in libopfcpp/util.hpp
-    opf::read_mat_labels("data/digits.dat", data, labels); // in util.hpp
-    cout << "Data shape: " << data.rows << ", " << data.cols << endl;
+    opf::lerRotuloDasMatrizes("data/digits.dat", data, labels); // in util.hpp
+    cout << "Data shape: " << data.linhas << ", " << data.colunas << endl;
 
     opf::StratifiedShuffleSplit sss(0.5); // in util.hpp
     pair<vector<int>, vector<int>> splits = sss.split(labels);
 
-    opf::index_by_list<float>(data, splits.first, train_data); // in util.hpp
-    opf::index_by_list<float>(data, splits.second, test_data);
+    opf::indicePorLista<float>(data, splits.first, train_data); // in util.hpp
+    opf::indicePorLista<float>(data, splits.second, test_data);
 
-    opf::index_by_list<int>(labels, splits.first, train_labels);
-    opf::index_by_list<int>(labels, splits.second, test_labels);
+    opf::indicePorLista<int>(labels, splits.first, train_labels);
+    opf::indicePorLista<int>(labels, splits.second, test_labels);
 
 
     cout << "########################################" << endl;
     cout << "Supervised OPF" << endl;
     /////////////////////////////////////////////
     // Fit and predict
-    opf::SupervisedOPF<float> opf;
-    opf.fit(train_data, train_labels);
-    vector<int> preds = opf.predict(test_data);
+    opf::OPFSupervisionado<float> opf;
+    opf.ajusta(train_data, train_labels);
+    vector<int> preds = opf.prediz(test_data);
     /////////////////////////////////////////////
 
     // And print accuracy
-    float acc1 = opf::accuracy(test_labels, preds); // in util.hpp
+    float acc1 = opf::acuracia(test_labels, preds); // in util.hpp
     cout << "Accuracy: " << acc1*100 << "%" << endl;
 
 
@@ -72,7 +72,7 @@ int main()
     cout << "Write..." << endl;
 
     {   // Sub scope to destroy variable "contents"
-        std::string contents = opf.serialize(opf::SFlags::Sup_SavePrototypes);
+        std::string contents = opf.serializa(opf::SFlags::Supervisionado_SalvaPrototipos);
         std::ofstream ofs ("teste.dat", std::ios::out | std::ios::binary);
         if (!ofs)
         {
@@ -80,7 +80,7 @@ int main()
             return -1;
         }
         
-        opf::write_bin<char>(ofs, contents.data(), contents.size());
+        opf::escreveBinario<char>(ofs, contents.data(), contents.size());
         ofs.close();
     }
 
@@ -99,11 +99,11 @@ int main()
     ifs.close();
 
     // Unserialize contents into an OPF object
-    opf::SupervisedOPF<float> opf2 = opf::SupervisedOPF<float>::unserialize(contents);
+    opf::OPFSupervisionado<float> opf2 = opf::OPFSupervisionado<float>::desserializa(contents);
 
     // Predict again an check if accuracies are equal
-    preds = opf2.predict(test_data);
-    float acc2 = opf::accuracy(test_labels, preds); // in util.hpp
+    preds = opf2.prediz(test_data);
+    float acc2 = opf::acuracia(test_labels, preds); // in util.hpp
     cout << "Accuracy: " << acc2*100 << "%" << endl;
 
 
