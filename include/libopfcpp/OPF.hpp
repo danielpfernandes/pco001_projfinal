@@ -885,7 +885,7 @@ std::string OPFSupervisionado<T>::serializa(uchar flags)
     }
 
     // Ordered_vertices
-    escreveBinario<unsigned int>(saida, this->nodosOrdenados.dado(), n_amostras);
+    escreveBinario<unsigned int>(saida, this->nodosOrdenados.data(), n_amostras);
 
     // Protótipos
     if (flags & SFlags::Supervisionado_SalvaPrototipos)

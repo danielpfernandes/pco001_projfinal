@@ -45,10 +45,10 @@ typedef timeval timer;
     gettimeofday(&TM_start,NULL);\
     TM_now = TM_start;
 #define SECTION_START(M) gettimeofday(&TM_now,NULL);\
-    fprintf(outchannel,"================================================\nStarting to measure %s\n",M);
+    fprintf(outchannel,"================================================\nIniciando a medição de %s\n",M);
 #define TIMING_SECTION(M, measurement) gettimeofday(&TM_now1,NULL);\
     *measurement=(TM_now1.tv_sec-TM_now.tv_sec)*1000.0 + (TM_now1.tv_usec-TM_now.tv_usec)*0.001;\
-    fprintf(outchannel,"%.3fms:\tSECTION %s\n",*measurement,M);\
+    fprintf(outchannel,"%.3fms:\tSEÇÃO %s\n",*measurement,M);\
     TM_now=TM_now1;
 #define TIMING_END() gettimeofday(&TM_now1,NULL);\
     fprintf(outchannel,"\nTotal time: %.3fs\n================================================\n",\

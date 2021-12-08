@@ -26,14 +26,14 @@ int main(int argc, char* argv[])
 
         Mat<float> data;
         vector<int> labels;
-        read_mat_labels(input_path, data, labels);
+        lerRotuloDasMatrizes(input_path, data, labels);
 
         std::ofstream file(output_path, std::ios::out);
-        for (int i = 0; i < data.rows; i++)
+        for (int i = 0; i < data.linhas; i++)
         {
-            float* row = data.row(i);
+            float* row = data.linha(i);
             file << labels[i];
-            for (int j = 0; j < data.cols; j++)
+            for (int j = 0; j < data.colunas; j++)
             {
                 file << ";" << row[j];
             }

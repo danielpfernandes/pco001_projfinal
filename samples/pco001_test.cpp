@@ -50,10 +50,10 @@ typedef timeval timer;
     gettimeofday(&TM_start,NULL);\
     TM_now = TM_start;
 #define SECTION_START(M) gettimeofday(&TM_now,NULL);\
-    fprintf(outchannel,"================================================\nStarting to measure %s\n",M);
+    fprintf(outchannel,"================================================\nIniciando a medição de %s\n",M);
 #define TIMING_SECTION(M, medida) gettimeofday(&TM_now1,NULL);\
     *(medida)=(TM_now1.tv_sec-TM_now.tv_sec)*1000.0 + (TM_now1.tv_usec-TM_now.tv_usec)*0.001;\
-    fprintf(outchannel,"%.3fms:\tSECTION %s\n",*(medida),M);\
+    fprintf(outchannel,"%.3fms:\tSEÇÃO %s\n",*(medida),M);\
     TM_now=TM_now1;
 #define TIMING_END() gettimeofday(&TM_now1,NULL);\
     fprintf(outchannel,"\nTotal time: %.3fs\n================================================\n",\
@@ -72,7 +72,7 @@ typedef timeval timer;
  */
 int main(int argc, char *argv[])
 {
-    vector<string> datasets = {"dado/pco001/iris.dat", "dado/pco001/banana.dat", "dado/pco001/messidor_features.dat"};
+    vector<string> datasets = {"data/pco001/iris.dat", "data/pco001/banana.dat", "data/pco001/messidor_features.dat"};
     TIMING_START();
 
     vector<vector<float>> times(5, vector<float>(datasets.size()));
