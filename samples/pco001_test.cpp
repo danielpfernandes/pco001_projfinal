@@ -128,34 +128,15 @@ int main(int argc, char *argv[])
         float acc = acuracia(valorDeReferencia, previsoes);
         printf("Acurácia: %.3f%%\n", acc * 100);
 
-        // *********** Tempo de treinamento pré-computado ***********
-        printf("\n");
+        // Imprimindo dados
+        printf("Matriz de treinamento: ");
+        imprimeMatriz(dadoDeTreinamento);
 
-        printf("\nExecutando OPF com valores pré-computados...\n");
+        printf("Matriz de teste: ");
+        imprimeMatriz(dadoDeTeste);
 
-        Mat<float> dadosDeTreinamentoPrecomp = computaDistanciasDeTreinamento<float>(dadoDeTreinamento);
-        Mat<float> dadosDeTestePrecomp = computaDistanciasDeTestes<float>(dadoDeTeste, dadoDeTreinamento);
-        TIMING_SECTION("Pré-computa dados de treinamento e de teste", &medida);
-        times[2][i] = medida;
-
-        // Classificador de treinamento
-        OPFSupervisionado<float> opf_precomp(true);
-        opf_precomp.ajusta(dadosDeTreinamentoPrecomp, rotulosDeTreinamento);
-
-        TIMING_SECTION("OPF treinamento pré-computado", &medida);
-        times[3][i] = medida;
-        
-        // E prevê os dados de teste
-        previsoes = opf_precomp.prediz(dadosDeTestePrecomp);
-
-        TIMING_SECTION("OPF teste pré-computado", &medida);
-        times[4][i] = medida;
-        
-        // Mede acurácia
-        acc = acuracia(valorDeReferencia, previsoes);
-        printf("Accuracy: %.3f%%\n", acc * 100);
-
-        cout << "================================================\n" << endl;
+        printf("Dados de referência: ");
+        //imprimeVetor(&valorDeReferencia, 100);
     }
 
     FILE *arquivo;

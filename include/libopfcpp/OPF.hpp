@@ -45,6 +45,7 @@
 #include <set>
 
 #include <omp.h>
+#include <iostream>
 
 namespace opf
 {
@@ -166,9 +167,6 @@ public:
     virtual T* operator[](size_t i);
     const virtual T* operator[](size_t i) const;
     Mat<T>& operator=(const Mat<T>& outro);
-    virtual Mat<T> copia();
-
-    void libera();
 };
 
 template <class T>
@@ -298,28 +296,7 @@ Mat<T>& Mat<T>::operator=(const Mat<T>& outro)
     return *this;
 }
 
-template <class T>
-Mat<T> Mat<T>::copia()
-{
-    Mat<T> out(this->linhas, this->colunas);
-    for (size_t i = 0; i < this->linhas; i++)
-    {
-        T* linha = this->linha(i);
-        T* linhaExterna = out.linha(i);
-        for (size_t j = 0; j < this->colunas; j++)
-            linhaExterna[j] = linha[j];
-    }
-
-    return std::move(out);
-}
-
-template <class T>
-void Mat<T>::libera()
-{
-    this->dado.reset();
-}
-
-/*****************************************/
+    /*****************************************/
 
 
 // Função de distância padrão
@@ -396,7 +373,7 @@ public:
     MatrizDeDistancias(const MatrizDeDistancias& outro);
     MatrizDeDistancias(const Mat<T>& caracteristicas, funcaoDistancia<T> distancia=distanciaEuclidiana<T>);
     virtual T& em(size_t i, size_t j);
-    const virtual T at(size_t i, size_t j) const;
+    const virtual T em(size_t i, size_t j) const;
 };
 
 // A primeira linha tem n-1 colunas, a segunda tem n-2, e assim por diante até linha n tem 0 colunas.
@@ -442,7 +419,7 @@ T& MatrizDeDistancias<T>::em(size_t i, size_t j)
 }
 
 template <class T>
-const T MatrizDeDistancias<T>::at(size_t i, size_t j) const
+const T MatrizDeDistancias<T>::em(size_t i, size_t j) const
 {
     if (i == j)
         return 0;
