@@ -28,13 +28,11 @@
 
 
 #include <vector>
-#include <iostream>
 #include <string>
 
 #include <sys/time.h>
 #include <ctime>
 #include <cstdio>
-#include <cassert>
 
 
 #include "libopfcpp/OPF.hpp"
@@ -57,7 +55,7 @@ typedef timeval timer;
     TM_now=TM_now1;
 #define TIMING_END() gettimeofday(&TM_now1,NULL);\
     fprintf(outchannel,"\nTotal time: %.3fs\n================================================\n",\
-      	 (TM_now1.tv_sec-TM_start.tv_sec) + (TM_now1.tv_usec-TM_start.tv_usec)*0.000001);
+         (TM_now1.tv_sec-TM_start.tv_sec) + (TM_now1.tv_usec-TM_start.tv_usec)*0.000001);
 
 
 /**
@@ -70,18 +68,16 @@ typedef timeval timer;
  *  Para cada conjunto de dados, são calculadas a precisão de teste e o tempo de execução para o uso regular e
  *  usando matrizes de distância pré-computadorizado.
  */
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     vector<string> datasets = {"data/pco001/iris.dat", "data/pco001/banana.dat", "data/pco001/messidor_features.dat"};
     TIMING_START();
 
     vector<vector<float>> times(5, vector<float>(datasets.size()));
     float medida;
 
-    for (unsigned int i = 0; i < datasets.size(); i++)
-    {
+    for (unsigned int i = 0; i < datasets.size(); i++) {
         float razaoDeTreinamento = 0.5;
-        if (argc == 2 ) {
+        if (argc == 2) {
             razaoDeTreinamento = stof(argv[1]);
         }
         string dataset = datasets[i];
@@ -121,13 +117,13 @@ int main(int argc, char *argv[])
 
         TIMING_SECTION("Treinamento de OPF", &medida);
         times[0][i] = medida;
-        
+
         // E previsão dos dados de teste
         vector<int> previsoes = opf.prediz(dadoDeTeste);
 
         TIMING_SECTION("Testando OPF", &medida);
         times[1][i] = medida;
-        
+
         // Medindo acurácia
         float acc = acuracia(valorDeReferencia, previsoes);
         printf("Acurácia: %.3f%%\n", acc * 100);
@@ -136,13 +132,15 @@ int main(int argc, char *argv[])
         armazenaDados(dataset, "training", dadoDeTreinamento);
         armazenaDados(dataset, "test", dadoDeTeste);
         armazenaDados(dataset, valorDeReferencia);
+        armazenaDados(dataset.append(".prototipo"), opf.getPrototipos());
 
     }
 
     FILE *arquivo;
     arquivo = fopen("timing.txt", "a");
     for (size_t i = 0; i < datasets.size(); i++)
-        fprintf(arquivo, "%s;%.3f;%.3f;%.3f;%.3f;%.3f\n", datasets[i].c_str(), times[0][i], times[1][i], times[2][i], times[3][i], times[4][i]);
+        fprintf(arquivo, "%s;%.3f;%.3f;%.3f;%.3f;%.3f\n", datasets[i].c_str(), times[0][i], times[1][i], times[2][i],
+                times[3][i], times[4][i]);
     fclose(arquivo);
 
     arquivo = fopen("training.txt", "a");
