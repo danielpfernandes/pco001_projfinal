@@ -149,7 +149,7 @@ namespace opf {
         std::time_t t = system_clock::to_time_t(p);
         fprintf(arquivo, "%s", "\n================================================\n");
         fprintf(arquivo, "%s", std::ctime(&t));
-        fprintf(arquivo, "%s", "\n================================================\n");
+        fprintf(arquivo, "%s", "================================================\n");
 
         for (std::string entrada: matrizDeTreinamento) {
             fprintf(arquivo, "%s\n", entrada.c_str());
@@ -159,6 +159,7 @@ namespace opf {
 
     template<class T>
     void armazenaDados(std::string nomeArquivo, std::vector<T> vetor) {
+
         FILE *arquivo;
         arquivo = fopen(nomeArquivo.append(".referencia").c_str(), "a");
 

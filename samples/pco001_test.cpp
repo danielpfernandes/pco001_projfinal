@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
         armazenaDados(dataset, "training", dadoDeTreinamento);
         armazenaDados(dataset, "test", dadoDeTeste);
         armazenaDados(dataset, valorDeReferencia);
-        armazenaDados(dataset.append(".prototipo"), opf.getPrototipos());
+        //armazenaDados(dataset.append(".prototipo"), opf.getPrototipos());
 
     }
 
