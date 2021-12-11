@@ -42,7 +42,7 @@
 
 #include "libopfcpp/OPF.hpp"
 
-
+using namespace std::chrono;
 
 namespace opf
 {
@@ -122,6 +122,65 @@ bool lerRotuloDasMatrizes(const std::string& nomeDoArquivo, Mat<T>& dado, std::v
     arquivo.close();
 
     return true;
+}
+
+
+template <class T>
+std::string escreveVetor(T* v, int tamanho) {
+    std::string vetor;
+    vetor.append("[");
+    for (int i = 0; i < tamanho; i++)
+        vetor.append(std::to_string(v[i]));
+        vetor.append(" ");
+    vetor.append("]");
+    return vetor;
+}
+
+template <class T>
+std::vector<std::string> stringMatriz(Mat<T> m) {
+    std::vector<std::string> matriz;
+    for (int i = 0; i < m.linhas; i++)
+    {
+        T* row = m.linha(i);
+        matriz.push_back(escreveVetor(row, m.colunas));
+    }
+    return matriz;
+}
+
+template <class T>
+void armazenaDados(std::string nomeArquivo, std::string tipo, Mat<T> matriz) {
+    FILE *arquivo;
+
+    arquivo = fopen(nomeArquivo.append("." + tipo).c_str(), "a");
+    std::vector<std::string> matrizDeTreinamento = stringMatriz(matriz);
+
+    system_clock::time_point p = system_clock::now();
+    std::time_t t = system_clock::to_time_t(p);
+    fprintf(arquivo, "%s", "\n================================================\n");
+    fprintf(arquivo, "%s", std::ctime(&t));
+    fprintf(arquivo, "%s", "\n================================================\n");
+    
+    for (std::string entrada : matrizDeTreinamento ) {
+        fprintf(arquivo, "%s\n", entrada.c_str());
+    }
+    fclose(arquivo);
+}
+
+template <class T>
+void armazenaDados(std::string nomeArquivo, std::vector<T> vetor) {
+    FILE *arquivo;
+    arquivo = fopen(nomeArquivo.append(".referencia").c_str(), "a");
+
+    system_clock::time_point p = system_clock::now();
+    std::time_t t = system_clock::to_time_t(p);
+    fprintf(arquivo, "%s", "\n================================================\n");
+    fprintf(arquivo, "%s", std::ctime(&t));
+    fprintf(arquivo, "%s", "================================================\n");
+    
+    for (int value : vetor) {
+        fprintf(arquivo, "%d\n", value);
+    }
+    fclose(arquivo);
 }
 
 /**

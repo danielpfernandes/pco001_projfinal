@@ -80,6 +80,10 @@ int main(int argc, char *argv[])
 
     for (unsigned int i = 0; i < datasets.size(); i++)
     {
+        float razaoDeTreinamento = 0.5;
+        if (argc == 2 ) {
+            razaoDeTreinamento = stof(argv[1]);
+        }
         string dataset = datasets[i];
         Mat<float> dado;
         vector<int> rotulos;
@@ -91,8 +95,8 @@ int main(int argc, char *argv[])
         SECTION_START(dataset.c_str());
         printf("Tamanho dos dados: Instâncias (%lu) x Atributos (%lu)\n\n", dado.linhas, dado.colunas);
 
-        printf("Preparando dado\n");
-        StratifiedShuffleSplit sss(0.5);
+        printf("Preparando dado (Razão de treinamento: %.2f)\n", razaoDeTreinamento);
+        StratifiedShuffleSplit sss(razaoDeTreinamento);
         pair<vector<int>, vector<int>> divisoes = sss.split(rotulos);
 
         TIMING_SECTION("Divisão dos dados", &medida);
@@ -128,15 +132,11 @@ int main(int argc, char *argv[])
         float acc = acuracia(valorDeReferencia, previsoes);
         printf("Acurácia: %.3f%%\n", acc * 100);
 
-        // Imprimindo dados
-        printf("Matriz de treinamento: ");
-        imprimeMatriz(dadoDeTreinamento);
+        // Armazenando dados
+        armazenaDados(dataset, "training", dadoDeTreinamento);
+        armazenaDados(dataset, "test", dadoDeTeste);
+        armazenaDados(dataset, valorDeReferencia);
 
-        printf("Matriz de teste: ");
-        imprimeMatriz(dadoDeTeste);
-
-        printf("Dados de referência: ");
-        //imprimeVetor(&valorDeReferencia, 100);
     }
 
     FILE *arquivo;
