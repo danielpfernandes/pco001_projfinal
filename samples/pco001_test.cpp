@@ -113,6 +113,8 @@ int main(int argc, char *argv[]) {
 
         // Classificador de treinamento
         OPFSupervisionado<float> opf;
+
+        //Treina o modelo com o dado e rótulos de treinamento
         opf.ajusta(dadoDeTreinamento, rotulosDeTreinamento);
 
         TIMING_SECTION("Treinamento de OPF", &medida);
@@ -132,7 +134,6 @@ int main(int argc, char *argv[]) {
         armazenaDados(dataset, "training", dadoDeTreinamento);
         armazenaDados(dataset, "test", dadoDeTeste);
         armazenaDados(dataset, valorDeReferencia);
-        //armazenaDados(dataset.append(".prototipo"), opf.getPrototipos());
 
     }
 

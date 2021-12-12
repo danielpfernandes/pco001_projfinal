@@ -153,7 +153,7 @@ namespace opf {
  */
     enum Color {
         BRANCO, // Novo vértice
-        CINZA,  // Na heap
+        CINZA,  // Na Heap
         PRETO  // Já visto
     };
 
@@ -170,22 +170,22 @@ namespace opf {
         }
 
         size_t indice{};      // Índice na lista - facilita as pesquisas
-        Color cor;          // Cor na heap. branco: nunca visitada, cinza: na heap, preto: removido da heap
-        float custo;        // Custo para alcançar o vértice
+        Color cor;            // Cor na Heap. branco: nunca visitada, cinza: na Heap, preto: removido da Heap
+        float custo;          // Custo para alcançar o vértice
         int rotuloVerdade{};  // Valor de referência
         int rotulo{};         // Rótulo atribuído
-        int predecessor;    // Vértice antecessor
-        bool isPrototipo;   // Se o vértice é um protótipo
+        int predecessor;      // Vértice antecessor
+        bool isPrototipo;     // Se o vértice é um protótipo
     };
 
 /**
- * Estrutura de dados de heap para usar como uma fila de prioridade
+ * Estrutura de dados de Heap para usar como uma fila de prioridade
  *
  */
-    class heap {
+    class Heap {
     private:
         std::vector<Vertice> *vertices; // Uma referência para o vetor de contêiner original
-        std::vector<Vertice *> vec;   // Um vetor de ponteiros para construir a heap em cima
+        std::vector<Vertice *> vec;   // Um vetor de ponteiros para construir a Heap em cima
 
         static bool comparaElemento(const Vertice *estruturaHeapEsquerda, const Vertice *estruturaHeapDireita) {
             return estruturaHeapEsquerda->custo >= estruturaHeapDireita->custo;
@@ -193,7 +193,7 @@ namespace opf {
 
     public:
         // Construtor de tamanho
-        heap(std::vector<Vertice> *vertices, const std::vector<int> &rotulos) {
+        Heap(std::vector<Vertice> *vertices, const std::vector<int> &rotulos) {
             this->vertices = vertices;
             size_t n = vertices->size();
             this->vec.reserve(n);
@@ -204,7 +204,7 @@ namespace opf {
         }
 
         /**
-         * Insere o novo elemento na heap
+         * Insere o novo elemento na Heap
          * @param item elemento
          * @param custo custo
          */
@@ -212,21 +212,21 @@ namespace opf {
             // Atualiza o valor de custo do vértice
             (*this->vertices)[item].custo = custo;
 
-            // Já presente na heap
+            // Já presente na Heap
             if ((*this->vertices)[item].cor == CINZA)
-                make_heap(this->vec.begin(), this->vec.end(), comparaElemento); // Remake the heap
+                make_heap(this->vec.begin(), this->vec.end(), comparaElemento); // Remake the Heap
 
-                // Novo na heap
+                // Novo na Heap
             else if ((*this->vertices)[item].cor == BRANCO) {
                 (*this->vertices)[item].cor = CINZA;
                 this->vec.push_back(&(*this->vertices)[item]);
-                push_heap(this->vec.begin(), this->vec.end(), comparaElemento); // Push new item to the heap
+                push_heap(this->vec.begin(), this->vec.end(), comparaElemento); // Push new item to the Heap
             }
-            // Note that black items can not be inserted into the heap
+            // Note that black items can not be inserted into the Heap
         }
 
         /**
-         * Atualiza o custo do item sem atualizar a heap
+         * Atualiza o custo do item sem atualizar a Heap
          * @param item item
          * @param custo custo
          */
@@ -240,22 +240,22 @@ namespace opf {
         }
 
         /**
-         * Atualiza a heap.
+         * Atualiza a Heap.
          * Isso é usado após várias chamadas para atualizaCusto, a fim de reduzir o número de chamadas para make_heap.
          */
         void heapify() {
-            make_heap(this->vec.begin(), this->vec.end(), comparaElemento); // Remake the heap
+            make_heap(this->vec.begin(), this->vec.end(), comparaElemento); // Remake the Heap
         }
 
         /**
-         * Remova e devolva o primeiro elemento da heap
-         * @return primeiro elemento da heap
+         * Remova e devolva o primeiro elemento da Heap
+         * @return primeiro elemento da Heap
          */
         int pop() {
             // Obtém e marca o primeiro elemento
             Vertice *frente = this->vec.front();
             frente->cor = PRETO;
-            // O remove da heap
+            // O remove da Heap
             pop_heap(this->vec.begin(), this->vec.end(), comparaElemento);
             this->vec.pop_back();
             // E o retorna
@@ -263,7 +263,7 @@ namespace opf {
         }
 
         /**
-         * Verifica se a heap está vazia
+         * Verifica se a Heap está vazia
          * @return true se estive vazia
          */
         bool isVazia() {
@@ -306,8 +306,6 @@ namespace opf {
 
         std::vector<int> prediz(const Mat<T> &dadoDeTeste);
 
-        // Informações de treinamento
-        std::vector<std::vector<float>> getPrototipos();
     };
 
     template<class T>
@@ -326,13 +324,13 @@ namespace opf {
     template<class T>
     void OPFSupervisionado<T>::prototipoDePrim(const std::vector<int> &rotulos) {
         this->vertices = std::vector<Vertice>(this->dadoDeTreinamento.linhas);
-        heap cabeca(&this->vertices, rotulos); // heap como uma fila de prioridades
+        Heap cabeca(&this->vertices, rotulos); // Heap como uma fila de prioridades
 
         // Primeiro vértice arbitrário
         cabeca.push(0, 0);
 
         while (!cabeca.isVazia()) {
-            // Pega a cabeça da heap e marca-a preta
+            // Pega a cabeça da Heap e marca-a preta
             size_t s = cabeca.pop();
 
             // Definição de protótipo
@@ -346,11 +344,10 @@ namespace opf {
                 }
             }
 
-
             // Seleção de arestas
 #pragma omp parallel for default(shared)
             for (size_t t = 0; t < this->vertices.size(); t++) {
-                // Se os vértices diferem e t não foi retirado da heap (marcado preto)
+                // Se os vértices diferem e t não foi retirado da Heap (marcado preto)
                 if (s != t && this->vertices[t].cor != PRETO) {
                     // Calcula o peso
                     float peso;
@@ -374,7 +371,7 @@ namespace opf {
     }
 
 /**
- * Treina o modelo com o dado dado e rotulos.
+ * Treina o modelo com o dado e rótulos.
  * @tparam T
  * @param treinamento
  *          - vetores de recurso original [n_samples, n_features] -- se isPrecomputado == false
@@ -393,12 +390,12 @@ namespace opf {
 
         // Modelo de inicialização
         this->prototipoDePrim(rotulos); // Encontra protótipos
-        heap cabeca(&this->vertices, rotulos); // heap como uma fila de prioridade
+        Heap cabeca(&this->vertices, rotulos); // Heap como uma fila de prioridade
 
         // Inicialização
         for (Vertice &vertice: this->vertices) {
             vertice.cor = BRANCO;
-            // Protótipos de custo 0, não ter antecessor e povoar o heap
+            // Protótipos de custo 0, não ter antecessor e povoar o Heap
             if (vertice.isPrototipo) {
                 vertice.predecessor = NIL;
                 vertice.custo = 0;
@@ -446,7 +443,7 @@ namespace opf {
     }
 
 /**
- * Classifique um conjunto de amostras usando um modelo treinado por OPFSupervisionado::ajusta.
+ * Classifica um conjunto de amostras usando um modelo treinado por OPFSupervisionado::ajusta.
  * @tparam T
  * @param dadoDeTeste
  *          - vetores de recurso original [n_samples, n_features] -- se isPrecomputado == false
@@ -500,26 +497,6 @@ namespace opf {
 /*****************************************/
 
 /*****************************************/
-/*              Acesso de dados          */
-/*****************************************/
-
-    template<class T>
-    std::vector<std::vector<float>> OPFSupervisionado<T>::getPrototipos() {
-        std::set<int> prots;
-        for (size_t i = 0; i < this->dadoDeTreinamento.linhas; i++) {
-            if (this->vertices[i].isPrototipo)
-                prots.insert(i);
-        }
-
-        std::vector<std::vector<float>> out(prots.size(), std::vector<float>(this->dadoDeTreinamento.colunas));
-        int i = 0;
-        for (auto it = prots.begin(); it != prots.end(); ++it, ++i) {
-            for (int j = 0; j < this->dadoDeTreinamento.colunas; j++) {
-                out[i][j] = this->dadoDeTreinamento[*it][j];
-            }
-        }
-
-        return out;
-    }
+/**********   Acesso de dados   **********/
 }
 #endif

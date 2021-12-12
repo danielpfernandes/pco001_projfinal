@@ -116,7 +116,13 @@ namespace opf {
         return true;
     }
 
-
+    /**
+     * Converter o vetor de um dataset para o formato string
+     * @tparam T
+     * @param v Vetor
+     * @param tamanho tamanho do vetor
+     * @return String do vetor convertido
+     */
     template<class T>
     std::string escreveVetor(T *v, int tamanho) {
         std::string vetor;
@@ -128,6 +134,12 @@ namespace opf {
         return vetor;
     }
 
+    /**
+     * Converte uma matriz de dataset para o formato string
+     * @tparam T
+     * @param m Matriz
+     * @return vetor de strings da matriz convertida
+     */
     template<class T>
     std::vector<std::string> stringMatriz(Mat <T> m) {
         std::vector<std::string> matriz;
@@ -138,6 +150,13 @@ namespace opf {
         return matriz;
     }
 
+    /**
+     * Cria um arquivo com os dados de uma dada matriz (teste/treinamento/etc)
+     * @tparam T
+     * @param nomeArquivo Nome do arquivo
+     * @param tipo sufixo do arquivo
+     * @param matriz matriz
+     */
     template<class T>
     void armazenaDados(std::string nomeArquivo, std::string tipo, Mat <T> matriz) {
         FILE *arquivo;
@@ -157,6 +176,12 @@ namespace opf {
         fclose(arquivo);
     }
 
+    /**
+     * Cria um arquivo com os dados de uma dado vetor (por exemplo, valores de referência - ground truth)
+     * @tparam T
+     * @param nomeArquivo Nome do arquivo
+     * @param vetor vetor
+     */
     template<class T>
     void armazenaDados(std::string nomeArquivo, std::vector<T> vetor) {
 
@@ -182,11 +207,11 @@ namespace opf {
  */
     class StratifiedShuffleSplit {
     private:
-        float train_ratio;
+        float razaoDeTreinamento;
         std::default_random_engine random_engine;
 
     public:
-        StratifiedShuffleSplit(float razaoDeTreinamento = 0.5) : train_ratio(razaoDeTreinamento) {
+        StratifiedShuffleSplit(float razaoDeTreinamento = 0.5) : razaoDeTreinamento(razaoDeTreinamento) {
             unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
             this->random_engine = std::default_random_engine(seed);
         }
@@ -207,7 +232,7 @@ namespace opf {
 
         // Encontra o número de amostras para cada classe
         for (it = totais.begin(); it != totais.end(); ++it) {
-            destino[it->first] = (int) round((float) it->second * this->train_ratio);
+            destino[it->first] = (int) round((float) it->second * this->razaoDeTreinamento);
             tamanhoTreino += destino[it->first];
         }
         tamanhoTeste = rotulos.size() - tamanhoTreino;
@@ -242,11 +267,11 @@ namespace opf {
     }
 
 /**
- *
+ * Indexa os dados de acordo com um vetor de índices num vetor de saída
  * @tparam T
- * @param dado
- * @param indices
- * @param saida
+ * @param dado Conjunto de dados (dados, rótulos de dados etc)
+ * @param indices Ìndices obtidos de um processo de StratifiedShuffleSplit
+ * @param saida Vetor de dados que armazenará o resultado desta função
  */
     template<class T>
     void indicePorLista(const std::vector<T> &dado, const std::vector<int> &indices, std::vector<T> &saida) {
@@ -259,11 +284,11 @@ namespace opf {
     }
 
 /**
- *
+ * Indexa os dados de acordo com um vetor de índices numa matriz de saída
  * @tparam T
- * @param dado
- * @param indices
- * @param saida
+ * @param dado Conjunto de dados (dados de treinamento etc)
+ * @param indices Ìndices obtidos de um processo de StratifiedShuffleSplit
+ * @param saida Matriz de dados que armazenará o resultado desta função
  */
     template<class T>
     void indicePorLista(const Mat <T> &dado, const std::vector<int> &indices, Mat <T> &saida) {
@@ -295,10 +320,7 @@ namespace opf {
                 acuracia++;
 
         return acuracia / n;
-
     }
-
-
 }
 
 #endif
