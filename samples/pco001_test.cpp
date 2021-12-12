@@ -28,13 +28,11 @@
 
 
 #include <vector>
-#include <iostream>
 #include <string>
 
 #include <sys/time.h>
 #include <ctime>
 #include <cstdio>
-#include <cassert>
 
 
 #include "libopfcpp/OPF.hpp"
@@ -57,7 +55,7 @@ typedef timeval timer;
     TM_now=TM_now1;
 #define TIMING_END() gettimeofday(&TM_now1,NULL);\
     fprintf(outchannel,"\nTotal time: %.3fs\n================================================\n",\
-      	 (TM_now1.tv_sec-TM_start.tv_sec) + (TM_now1.tv_usec-TM_start.tv_usec)*0.000001);
+         (TM_now1.tv_sec-TM_start.tv_sec) + (TM_now1.tv_usec-TM_start.tv_usec)*0.000001);
 
 
 /**
@@ -70,16 +68,18 @@ typedef timeval timer;
  *  Para cada conjunto de dados, são calculadas a precisão de teste e o tempo de execução para o uso regular e
  *  usando matrizes de distância pré-computadorizado.
  */
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     vector<string> datasets = {"data/pco001/iris.dat", "data/pco001/banana.dat", "data/pco001/messidor_features.dat"};
     TIMING_START();
 
     vector<vector<float>> times(5, vector<float>(datasets.size()));
     float medida;
 
-    for (unsigned int i = 0; i < datasets.size(); i++)
-    {
+    for (unsigned int i = 0; i < datasets.size(); i++) {
+        float razaoDeTreinamento = 0.5;
+        if (argc == 2) {
+            razaoDeTreinamento = stof(argv[1]);
+        }
         string dataset = datasets[i];
         Mat<float> dado;
         vector<int> rotulos;
@@ -91,8 +91,8 @@ int main(int argc, char *argv[])
         SECTION_START(dataset.c_str());
         printf("Tamanho dos dados: Instâncias (%lu) x Atributos (%lu)\n\n", dado.linhas, dado.colunas);
 
-        printf("Preparando dado\n");
-        StratifiedShuffleSplit sss(0.5);
+        printf("Preparando dado (Razão de treinamento: %.2f)\n", razaoDeTreinamento);
+        StratifiedShuffleSplit sss(razaoDeTreinamento);
         pair<vector<int>, vector<int>> divisoes = sss.split(rotulos);
 
         TIMING_SECTION("Divisão dos dados", &medida);
@@ -113,60 +113,47 @@ int main(int argc, char *argv[])
 
         // Classificador de treinamento
         OPFSupervisionado<float> opf;
+
+        //Treina o modelo com o dado e rótulos de treinamento
         opf.ajusta(dadoDeTreinamento, rotulosDeTreinamento);
 
         TIMING_SECTION("Treinamento de OPF", &medida);
         times[0][i] = medida;
-        
+
         // E previsão dos dados de teste
         vector<int> previsoes = opf.prediz(dadoDeTeste);
 
         TIMING_SECTION("Testando OPF", &medida);
         times[1][i] = medida;
-        
+
         // Medindo acurácia
         float acc = acuracia(valorDeReferencia, previsoes);
+        times[2][i] = acc;
+        times[3][i] = razaoDeTreinamento;
         printf("Acurácia: %.3f%%\n", acc * 100);
 
-        // *********** Tempo de treinamento pré-computado ***********
-        printf("\n");
+        // Armazenando dados
+        armazenaDados(dataset, "training", dadoDeTreinamento);
+        armazenaDados(dataset, "test", dadoDeTeste);
+        armazenaDados(dataset, valorDeReferencia);
 
-        printf("\nExecutando OPF com valores pré-computados...\n");
-
-        Mat<float> dadosDeTreinamentoPrecomp = computaDistanciasDeTreinamento<float>(dadoDeTreinamento);
-        Mat<float> dadosDeTestePrecomp = computaDistanciasDeTestes<float>(dadoDeTeste, dadoDeTreinamento);
-        TIMING_SECTION("Pré-computa dados de treinamento e de teste", &medida);
-        times[2][i] = medida;
-
-        // Classificador de treinamento
-        OPFSupervisionado<float> opf_precomp(true);
-        opf_precomp.ajusta(dadosDeTreinamentoPrecomp, rotulosDeTreinamento);
-
-        TIMING_SECTION("OPF treinamento pré-computado", &medida);
-        times[3][i] = medida;
-        
-        // E prevê os dados de teste
-        previsoes = opf_precomp.prediz(dadosDeTestePrecomp);
-
-        TIMING_SECTION("OPF teste pré-computado", &medida);
-        times[4][i] = medida;
-        
-        // Mede acurácia
-        acc = acuracia(valorDeReferencia, previsoes);
-        printf("Accuracy: %.3f%%\n", acc * 100);
-
-        cout << "================================================\n" << endl;
     }
 
     FILE *arquivo;
     arquivo = fopen("timing.txt", "a");
     for (size_t i = 0; i < datasets.size(); i++)
-        fprintf(arquivo, "%s;%.3f;%.3f;%.3f;%.3f;%.3f\n", datasets[i].c_str(), times[0][i], times[1][i], times[2][i], times[3][i], times[4][i]);
+        fprintf(arquivo, "%s;%.3f;%.3f;%.3f;%.3f;%.3f\n", datasets[i].c_str(), times[0][i], times[1][i], times[2][i],
+                times[3][i], times[4][i]);
     fclose(arquivo);
 
     arquivo = fopen("training.txt", "a");
     for (size_t i = 0; i < datasets.size(); i++)
         fprintf(arquivo, "%s;%.3f\n", datasets[i].c_str(), times[0][i]);
+    fclose(arquivo);
+
+    arquivo = fopen("accuracy.txt", "a");
+    for (size_t i = 0; i < datasets.size(); i++)
+        fprintf(arquivo, "%s;%.3f;%.3f\n", datasets[i].c_str(), times[2][i], times[3][i]);
     fclose(arquivo);
 
     TIMING_END();

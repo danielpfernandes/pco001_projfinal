@@ -1,21 +1,5 @@
 	
-all: test openmp persistence unsup anomaly datcsv pco001
-	
-
-test:
-	clang++ samples/test.cpp -std=c++1y -o test -Iinclude -O3 -Wall
-
-openmp:
-	clang++ samples/test.cpp -std=c++1y -o test_parallel -Iinclude -O3 -fopenmp -Wall
-
-persistence:
-	clang++ samples/persistence_test.cpp -std=c++1y -o persistence -Iinclude -O3 -fopenmp -Wall
-
-unsup:
-	clang++ samples/test_unsup.cpp -std=c++1y -o test_unsup -Iinclude -O3 -Wall
-
-anomaly:
-	clang++ samples/test_anomaly.cpp -std=c++1y -o test_anomaly -Iinclude -O3 -Wall
+all: datcsv pco001
 
 datcsv:
 	clang++ tools/convert_dat_csv.cpp -std=c++1y -o tools/datcsv -Iinclude -O3 -Wall
@@ -24,5 +8,5 @@ pco001:
 	clang++ samples/pco001_test.cpp -std=c++1y -o pco001_test -Iinclude -O3 -fopenmp -Wall
 	
 clean:
-	rm -f pco001_test test test_parallel persistence test_unsup test_anomaly tools/datcsv teste.dat timing.txt training.txt
+	rm -f pco001_test tools/datcsv teste.dat *.txt data/pco001/*.test data/pco001/*.training data/pco001/*.referencia
 

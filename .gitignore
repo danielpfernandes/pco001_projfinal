@@ -5,3 +5,4 @@
 /cmake-build-release/
 /cmake-build-relwithdebinfo/
 /CMakeLists.txt
+.vscode/settings.json
