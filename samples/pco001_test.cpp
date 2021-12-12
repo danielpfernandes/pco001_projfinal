@@ -128,6 +128,8 @@ int main(int argc, char *argv[]) {
 
         // Medindo acurácia
         float acc = acuracia(valorDeReferencia, previsoes);
+        times[2][i] = acc;
+        times[3][i] = razaoDeTreinamento;
         printf("Acurácia: %.3f%%\n", acc * 100);
 
         // Armazenando dados
@@ -147,6 +149,11 @@ int main(int argc, char *argv[]) {
     arquivo = fopen("training.txt", "a");
     for (size_t i = 0; i < datasets.size(); i++)
         fprintf(arquivo, "%s;%.3f\n", datasets[i].c_str(), times[0][i]);
+    fclose(arquivo);
+
+    arquivo = fopen("accuracy.txt", "a");
+    for (size_t i = 0; i < datasets.size(); i++)
+        fprintf(arquivo, "%s;%.3f;%.3f\n", datasets[i].c_str(), times[2][i], times[3][i]);
     fclose(arquivo);
 
     TIMING_END();

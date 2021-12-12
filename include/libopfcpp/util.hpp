@@ -127,9 +127,10 @@ namespace opf {
     std::string escreveVetor(T *v, int tamanho) {
         std::string vetor;
         vetor.append("[");
-        for (int i = 0; i < tamanho; i++)
+        for (int i = 0; i < tamanho; i++) {
             vetor.append(std::to_string(v[i]));
-        vetor.append(" ");
+            vetor.append(" ");
+        }
         vetor.append("]");
         return vetor;
     }
