@@ -220,7 +220,12 @@ namespace opf {
         std::pair<std::vector<int>, std::vector<int>> split(const std::vector<int> &rotulos);
     };
 
-// índices de treino, índices de testes
+    /**
+     * @brief Realiza o processo de divisão dos rótulos para indexação dos conjuntos de treino e de teste.
+     * 
+     * @param rotulos Rótodos do conjunto de dados
+     * @return std::pair<std::vector<int>, std::vector<int>> Par de rótulos de treino e de teste
+     */
     std::pair<std::vector<int>, std::vector<int>> StratifiedShuffleSplit::split(const std::vector<int> &rotulos) {
         std::map<int, int> totais, destino, atual;
         std::map<int, int>::iterator it;
